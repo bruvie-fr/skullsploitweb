@@ -264,6 +264,13 @@ app.delete('/api/keys/:key', requireDev, (req, res) => {
   res.json({ ok: true });
 });
 
+// configurable: valid script categories
+const CATEGORIES = ['script', 'gui', 'morph'];
+function normCategory(c) {
+  const v = String(c || '').toLowerCase().trim();
+  return CATEGORIES.includes(v) ? v : 'script';
+}
+
 app.get('/api/scripts', requireUser, (req, res) => {
   const scripts = readJson(SCRIPTS_FILE, []);
   const me = req.session.user.username;
@@ -271,6 +278,7 @@ app.get('/api/scripts', requireUser, (req, res) => {
     scripts: scripts.map(s => ({
       id: s.id,
       title: s.title,
+      category: normCategory(s.category),
       tags: s.tags || [],
       author: s.author,
       body: s.body,
@@ -281,34 +289,65 @@ app.get('/api/scripts', requireUser, (req, res) => {
   });
 });
 
-app.post('/api/scripts', requireDev, (req, res) => {
-  const { title, tags = [], body } = req.body || {};
-  if (typeof title !== 'string' || typeof body !== 'string') {
-    return res.status(400).json({ error: 'title and body are required' });
-  }
-  if (!title.trim() || !body.trim()) return res.status(400).json({ error: 'title and body are required' });
+function buildScript({ title, body, tags, category, author }) {
+  if (typeof title !== 'string' || typeof body !== 'string') return { error: 'title and body are required' };
+  const t = title.trim();
+  const b = body;
+  if (!t || !b.trim()) return { error: 'title and body are required' };
   // configurable: max script body size
-  if (body.length > 32 * 1024) return res.status(413).json({ error: 'script body too large (max 32 KB)' });
+  if (b.length > 32 * 1024) return { error: 'script body too large (max 32 KB)' };
+  const rawTags = Array.isArray(tags) ? tags : String(tags || '').split(',');
+  const cleanTags = rawTags.map(x => String(x).trim().slice(0, 24)).filter(Boolean).slice(0, 10);
+  return {
+    script: {
+      id: crypto.randomUUID(),
+      title: t.slice(0, 80),
+      category: normCategory(category),
+      tags: cleanTags,
+      body: b,
+      author,
+      likes: [],
+      createdAt: new Date().toISOString()
+    }
+  };
+}
 
-  const rawTags = Array.isArray(tags) ? tags : String(tags).split(',');
-  const cleanTags = rawTags
-    .map(t => String(t).trim().slice(0, 24))
-    .filter(Boolean)
-    .slice(0, 10);
+app.post('/api/scripts', requireDev, (req, res) => {
+  const { title, tags = [], body, category } = req.body || {};
+  const r = buildScript({ title, body, tags, category, author: req.session.user.username });
+  if (r.error) return res.status(r.error.includes('too large') ? 413 : 400).json({ error: r.error });
+  const scripts = readJson(SCRIPTS_FILE, []);
+  scripts.unshift(r.script);
+  writeJson(SCRIPTS_FILE, scripts);
+  res.json({ ok: true, script: r.script });
+});
+
+// configurable: max items per bulk import call
+const IMPORT_MAX = 500;
+app.post('/api/scripts/import', requireDev, (req, res) => {
+  const { items } = req.body || {};
+  if (!Array.isArray(items)) return res.status(400).json({ error: 'expected { items: [ ... ] }' });
+  if (items.length === 0) return res.status(400).json({ error: 'no items to import' });
+  if (items.length > IMPORT_MAX) return res.status(400).json({ error: `too many items at once (max ${IMPORT_MAX})` });
 
   const scripts = readJson(SCRIPTS_FILE, []);
-  const script = {
-    id: crypto.randomUUID(),
-    title: title.trim().slice(0, 80),
-    tags: cleanTags,
-    body,
-    author: req.session.user.username,
-    likes: [],
-    createdAt: new Date().toISOString()
-  };
-  scripts.unshift(script);
+  const imported = [];
+  const skipped = [];
+  for (let i = 0; i < items.length; i++) {
+    const it = items[i] || {};
+    const r = buildScript({
+      title: it.title,
+      body: it.body,
+      tags: it.tags,
+      category: it.category,
+      author: req.session.user.username
+    });
+    if (r.error) { skipped.push({ index: i, title: it.title || null, reason: r.error }); continue; }
+    scripts.unshift(r.script);
+    imported.push({ id: r.script.id, title: r.script.title, category: r.script.category });
+  }
   writeJson(SCRIPTS_FILE, scripts);
-  res.json({ ok: true, script });
+  res.json({ ok: true, imported: imported.length, skipped: skipped.length, skippedDetail: skipped.slice(0, 20) });
 });
 
 app.delete('/api/scripts/:id', requireDev, (req, res) => {

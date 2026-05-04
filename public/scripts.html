@@ -23,12 +23,20 @@
   </div>
 </section>
 <section class="container-wide" style="padding-top: 0;">
-  <div class="row-between" style="margin-bottom: 28px; gap: 14px;">
-    <input id="search" placeholder="search by title, author, or tag..." style="max-width: 420px;" />
-    <div class="row" style="gap: 6px;">
-      <button class="btn-ghost active" data-filter="all">all</button>
-      <button class="btn-ghost" data-filter="liked">liked</button>
-      <button class="btn-ghost" data-filter="popular">popular</button>
+  <div class="stack" style="gap: 16px; margin-bottom: 28px;">
+    <input id="search" placeholder="search by title, author, or tag..." style="max-width: 480px;" />
+    <div class="row-between" style="gap: 14px;">
+      <div class="row" style="gap: 6px;">
+        <button class="btn-ghost active" data-cat="all">all</button>
+        <button class="btn-ghost" data-cat="script">scripts</button>
+        <button class="btn-ghost" data-cat="gui">guis</button>
+        <button class="btn-ghost" data-cat="morph">morphs</button>
+      </div>
+      <div class="row" style="gap: 6px;">
+        <button class="btn-ghost active" data-filter="all">recent</button>
+        <button class="btn-ghost" data-filter="liked">liked</button>
+        <button class="btn-ghost" data-filter="popular">popular</button>
+      </div>
     </div>
   </div>
   <div id="list"></div>
@@ -59,6 +67,7 @@
 <script>
   let all = [];
   let activeFilter = 'all';
+  let activeCat = 'all';
   let me = null;
 
   (async () => {
@@ -80,9 +89,10 @@
   function render() {
     const q = document.getElementById('search').value.trim().toLowerCase();
     let list = all.filter(s => {
+      if (activeCat !== 'all' && (s.category || 'script') !== activeCat) return false;
       if (activeFilter === 'liked' && !s.liked) return false;
       if (q) {
-        const hay = `${s.title} ${s.author} ${(s.tags || []).join(' ')}`.toLowerCase();
+        const hay = `${s.title} ${s.author} ${(s.tags || []).join(' ')} ${s.category || ''}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
@@ -91,13 +101,16 @@
 
     const c = document.getElementById('list');
     if (!list.length) {
-      c.innerHTML = `<div class="panel"><p class="muted">no scripts match — try a different filter.</p></div>`;
+      c.innerHTML = `<div class="panel"><p class="muted">nothing here yet — try a different filter.</p></div>`;
       return;
     }
     c.innerHTML = list.map(s => `
       <div class="script-card">
         <div style="min-width: 0;">
-          <div class="script-card-title">${escapeHtml(s.title)}</div>
+          <div class="row" style="gap: 12px; align-items: baseline; flex-wrap: wrap;">
+            <span class="script-card-title">${escapeHtml(s.title)}</span>
+            <span class="chip">${escapeHtml(s.category || 'script')}</span>
+          </div>
           <div class="script-card-meta" style="margin-top: 8px;">
             <span>by ${escapeHtml(s.author)}</span>
             <span>${formatDate(s.createdAt)}</span>
@@ -156,6 +169,14 @@
     b.addEventListener('click', () => {
       activeFilter = b.dataset.filter;
       document.querySelectorAll('[data-filter]').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      render();
+    });
+  });
+  document.querySelectorAll('[data-cat]').forEach(b => {
+    b.addEventListener('click', () => {
+      activeCat = b.dataset.cat;
+      document.querySelectorAll('[data-cat]').forEach(x => x.classList.remove('active'));
       b.classList.add('active');
       render();
     });
