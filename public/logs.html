@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>execution logs · skullsploit</title>
+<link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+<script src="/js/common.js"></script>
+<script>mountNav('/logs');</script>
+<section class="hero" style="padding-top: clamp(60px,8vw,100px); padding-bottom: clamp(40px,5vw,60px);">
+  <div class="hero-grid">
+    <div>
+      <span class="label reveal reveal-1">execution logs</span>
+      <h1 class="reveal reveal-2" style="margin-top: 14px; font-size: clamp(56px,12vw,140px);">logs<span class="cursor"></span></h1>
+      <p class="reveal reveal-3 lead" style="max-width: 540px; margin-top: 24px;">every script the in-game executor runs gets logged here. tied to the website account whose token loaded the gui. click "join" to hop into the server.</p>
+    </div>
+    <aside class="hero-meta reveal reveal-4">
+      <div><span class="k">total</span><span class="v" id="logT">—</span></div>
+      <div><span class="k">last hour</span><span class="v" id="logH">—</span></div>
+    </aside>
+  </div>
+</section>
+<section class="container-wide" style="padding-top: 0;">
+  <div class="row-between" style="margin-bottom: 28px; gap: 14px; flex-wrap: wrap;">
+    <input id="search" placeholder="filter by user, game, or script..." style="max-width: 420px;" />
+    <button class="btn-ghost" id="refreshLogs">refresh</button>
+  </div>
+  <div class="table-wrap" style="border: 1px solid var(--line);">
+    <table>
+      <thead><tr><th>when</th><th>who</th><th>game</th><th>preview</th><th></th></tr></thead>
+      <tbody id="logsBody"><tr><td colspan="5" class="muted">loading...</td></tr></tbody>
+    </table>
+  </div>
+</section>
+<script>mountFooter();</script>
+<script>
+  let allLogs = [];
+
+  (async () => {
+    const me = await requireSession('dev');
+    if (!me) return;
+    await load();
+    setInterval(load, 20000);
+    document.getElementById('refreshLogs').addEventListener('click', () => { load(); toast('refreshed'); });
+    document.getElementById('search').addEventListener('input', render);
+  })();
+
+  async function load() {
+    try {
+      const { logs } = await api('/api/logs');
+      allLogs = logs;
+      const hourAgo = Date.now() - 3600 * 1000;
+      document.getElementById('logT').textContent = logs.length;
+      document.getElementById('logH').textContent = logs.filter(l => new Date(l.at).getTime() > hourAgo).length;
+      render();
+    } catch { toast('failed to load logs'); }
+  }
+
+  function render() {
+    const q = document.getElementById('search').value.trim().toLowerCase();
+    const logs = allLogs.filter(l => {
+      if (!q) return true;
+      const hay = `${l.websiteUser} ${l.robloxName} ${l.gameName} ${l.scriptTitle || ''} ${l.scriptPreview || ''}`.toLowerCase();
+      return hay.includes(q);
+    });
+    const tbody = document.getElementById('logsBody');
+    if (!logs.length) {
+      tbody.innerHTML = `<tr><td colspan="5" class="muted">${allLogs.length ? 'no logs match.' : 'no executions logged yet — runs from the in-game executor will show up here.'}</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = logs.map(l => {
+      const when = new Date(l.at);
+      const titleOrPreview = l.scriptTitle ? escapeHtml(l.scriptTitle) : `<span class="muted">untitled</span>`;
+      const preview = l.scriptPreview ? `<code class="kbd" style="font-size:11px; max-width: 380px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block;">${escapeHtml(l.scriptPreview)}</code>` : `<span class="muted">—</span>`;
+      return `
+        <tr>
+          <td title="${escapeHtml(when.toISOString())}">${formatAgo(when)}</td>
+          <td>
+            <div style="font-weight: 500;">${escapeHtml(l.websiteUser)}<span class="muted" style="font-weight: 400;"> · ${l.kind}</span></div>
+            <div class="muted" style="font-size: 11px; margin-top: 2px;">as ${escapeHtml(l.robloxName || '?')}</div>
+          </td>
+          <td>
+            <div>${escapeHtml(l.gameName || 'Unknown')}</div>
+            <div class="muted" style="font-size: 11px; font-family: var(--f-mono); margin-top: 2px;">${escapeHtml((l.jobId || '').slice(0, 12))}…</div>
+          </td>
+          <td>${titleOrPreview}<div style="margin-top:6px;">${preview}</div></td>
+          <td class="actions">${l.joinUrl ? `<a class="btn-ghost" href="${escapeHtml(l.joinUrl)}" target="_blank" rel="noopener" style="text-decoration: none;">join →</a>` : ''}</td>
+        </tr>`;
+    }).join('');
+  }
+
+  function formatAgo(d) {
+    const s = Math.floor((Date.now() - d.getTime()) / 1000);
+    if (s < 60) return s + 's ago';
+    if (s < 3600) return Math.floor(s / 60) + 'm ago';
+    if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+    return Math.floor(s / 86400) + 'd ago';
+  }
+</script>
+</body>
+</html>

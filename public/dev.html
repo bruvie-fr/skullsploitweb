@@ -14,12 +14,13 @@
     <div>
       <span class="label reveal reveal-1">developer hub</span>
       <h1 class="reveal reveal-2" style="margin-top: 14px; font-size: clamp(56px,12vw,140px);">workshop<span class="cursor"></span></h1>
-      <p class="reveal reveal-3 lead" style="max-width: 520px; margin-top: 24px;">mint invite keys for new members and publish scripts to the hub.</p>
+      <p class="reveal reveal-3 lead" style="max-width: 520px; margin-top: 24px;">mint invite keys, publish scripts, and bulk import. your drops and execution logs each have their own page now.</p>
     </div>
     <aside class="hero-meta reveal reveal-4">
       <div><span class="k">keys total</span><span class="v" id="kT">—</span></div>
       <div><span class="k">keys active</span><span class="v" id="kA">—</span></div>
-      <div><span class="k">your scripts</span><span class="v" id="myCount">—</span></div>
+      <div><a href="/drops" class="k" style="text-decoration: none;">your drops →</a><span class="v" id="myCount">—</span></div>
+      <div><a href="/logs" class="k" style="text-decoration: none;">logs →</a><span class="v" id="logCount">—</span></div>
     </aside>
   </div>
 </section>
@@ -66,11 +67,12 @@
       </div>
     </div>
   </div>
+
   <div class="grid grid-2">
     <div class="panel-flush" style="border-right: 1px solid var(--line);">
       <span class="label">publish a script</span>
       <h2 style="margin-top: 8px;">drop something new</h2>
-      <p class="muted" style="margin-top: 10px;">give it a title, optional tags, and the body. that's it.</p>
+      <p class="muted" style="margin-top: 10px;">give it a title, optional tags, and the body. that's it. it shows up in <a href="/drops">your drops</a>.</p>
       <form id="pub" style="margin-top: 28px;">
         <div class="form-row">
           <div class="field">
@@ -98,15 +100,6 @@
       </form>
     </div>
     <div class="panel-flush">
-      <span class="label">your published scripts</span>
-      <h2 style="margin-top: 8px;">your drops</h2>
-      <p class="muted" style="margin-top: 10px;">scripts you've shared with the community.</p>
-      <div id="myList" style="margin-top: 28px;"></div>
-    </div>
-  </div>
-
-  <div class="grid grid-2" style="margin-top: 60px;">
-    <div class="panel-flush" style="border-right: 1px solid var(--line);">
       <span class="label">bulk import</span>
       <h2 style="margin-top: 8px;">paste a list</h2>
       <p class="muted" style="margin-top: 10px;">paste a JSON array of items. each one becomes a published script under your name. up to 500 at a time.</p>
@@ -130,15 +123,8 @@
         <button class="btn-solid" type="submit">import →</button>
       </form>
       <div id="impResult" style="margin-top: 18px;"></div>
-    </div>
-    <div class="panel-flush">
-      <span class="label">tips</span>
-      <h2 style="margin-top: 8px;">how to use</h2>
-      <p class="muted" style="margin-top: 14px; line-height: 1.7;">
-        every item must have a <span class="kbd">title</span> and <span class="kbd">body</span>. <span class="kbd">category</span> defaults to <span class="kbd">script</span>; <span class="kbd">tags</span> can be an array or a comma-separated string. titles are capped at 80 characters, bodies at 32 KB, and tags at 10 entries × 24 chars.
-      </p>
-      <p class="muted" style="margin-top: 18px; line-height: 1.7;">
-        items missing required fields are skipped and reported back. nothing is overwritten — every import creates new entries.
+      <p class="muted" style="margin-top: 18px; line-height: 1.7; font-size: 13px;">
+        items missing required fields are skipped and reported back. titles cap at 80 chars, bodies at 32 KB, tags at 10 entries × 24 chars.
       </p>
     </div>
   </div>
@@ -150,8 +136,19 @@
   (async () => {
     me = await requireSession('dev');
     if (!me) return;
-    await Promise.all([loadKeys(), loadScripts()]);
+    await Promise.all([loadKeys(), loadCounts()]);
   })();
+
+  async function loadCounts() {
+    try {
+      const { scripts } = await api('/api/scripts');
+      document.getElementById('myCount').textContent = scripts.filter(s => s.author === me.username).length;
+    } catch {}
+    try {
+      const { logs } = await api('/api/logs');
+      document.getElementById('logCount').textContent = logs.length;
+    } catch {}
+  }
 
   async function loadKeys() {
     const { keys } = await api('/api/keys');
@@ -186,40 +183,6 @@
     });
     document.querySelectorAll('[data-copy]').forEach(s => s.onclick = () => {
       navigator.clipboard.writeText(s.dataset.copy); toast('copied');
-    });
-  }
-
-  async function loadScripts() {
-    const { scripts } = await api('/api/scripts');
-    const mine = scripts.filter(s => s.author === me.username);
-    document.getElementById('myCount').textContent = mine.length;
-
-    document.getElementById('myList').innerHTML = mine.length ? mine.map(s => `
-      <div class="script-card">
-        <div style="min-width: 0;">
-          <div class="row" style="gap: 12px; align-items: baseline; flex-wrap: wrap;">
-            <span class="script-card-title">${escapeHtml(s.title)}</span>
-            <span class="chip">${escapeHtml(s.category || 'script')}</span>
-          </div>
-          <div class="script-card-meta" style="margin-top: 8px;">
-            <span>${formatDate(s.createdAt)}</span>
-            <span style="display: inline-flex; align-items: center; gap: 6px;">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-7-4.35-9.5-9C1 8 3.5 4 7.5 4c2 0 3.5 1 4.5 2.5C13 5 14.5 4 16.5 4 20.5 4 23 8 21.5 12c-2.5 4.65-9.5 9-9.5 9z"/></svg>
-              ${Number(s.likeCount) || 0}
-            </span>
-            <span>${(s.tags || []).map(t => `<span class="kbd">${escapeHtml(t)}</span>`).join(' ')}</span>
-          </div>
-        </div>
-        <div class="script-card-actions">
-          <button class="btn-ghost" data-del="${s.id}">remove</button>
-        </div>
-      </div>
-    `).join('') : `<div class="panel"><p class="muted">nothing here yet — publish your first script on the left.</p></div>`;
-
-    document.querySelectorAll('#myList [data-del]').forEach(b => b.onclick = async () => {
-      if (!confirm('remove this script?')) return;
-      try { await api('/api/scripts/' + b.dataset.del, { method: 'DELETE' }); toast('removed'); loadScripts(); }
-      catch (e) { toast(e.message); }
     });
   }
 
@@ -265,7 +228,7 @@
       document.getElementById('tg').value = '';
       document.getElementById('b').value = '';
       toast('published');
-      loadScripts();
+      loadCounts();
     } catch (e2) { toast(e2.message); }
   });
 
@@ -290,7 +253,7 @@
       if (r.imported > 0) {
         document.getElementById('impBody').value = '';
         toast(`imported ${r.imported} item${r.imported === 1 ? '' : 's'}`);
-        loadScripts();
+        loadCounts();
       }
     } catch (e2) { toast(e2.message); }
   });

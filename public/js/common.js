@@ -63,7 +63,11 @@
       { href: '/games',     label: 'Games' },
       { href: '/scripts',   label: 'Scripts' }
     ];
-    if (me && me.kind === 'dev') links.push({ href: '/dev', label: 'Developer' });
+    if (me && me.kind === 'dev') {
+      links.push({ href: '/dev',    label: 'Developer' });
+      links.push({ href: '/drops',  label: 'Drops' });
+      links.push({ href: '/logs',   label: 'Logs' });
+    }
 
     const linkHtml = links.map(l => `<li><a href="${l.href}" class="${l.href === active ? 'active' : ''}">${l.label}</a></li>`).join('');
 

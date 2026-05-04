@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>your drops · skullsploit</title>
+<link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+<script src="/js/common.js"></script>
+<script>mountNav('/drops');</script>
+<section class="hero" style="padding-top: clamp(60px,8vw,100px); padding-bottom: clamp(40px,5vw,60px);">
+  <div class="hero-grid">
+    <div>
+      <span class="label reveal reveal-1">your published scripts</span>
+      <h1 class="reveal reveal-2" style="margin-top: 14px; font-size: clamp(56px,12vw,140px);">drops<span class="cursor"></span></h1>
+      <p class="reveal reveal-3 lead" style="max-width: 520px; margin-top: 24px;">scripts you've shared with the community. remove anything that's gone stale.</p>
+    </div>
+    <aside class="hero-meta reveal reveal-4">
+      <div><span class="k">total</span><span class="v" id="myCount">—</span></div>
+      <div><span class="k">total likes</span><span class="v" id="myLikes">—</span></div>
+    </aside>
+  </div>
+</section>
+<section class="container-wide" style="padding-top: 0;">
+  <div class="row-between" style="margin-bottom: 28px; gap: 14px;">
+    <input id="search" placeholder="filter your drops..." style="max-width: 360px;" />
+    <a class="btn-solid" href="/dev" style="text-decoration: none;">publish new →</a>
+  </div>
+  <div id="myList"></div>
+</section>
+<script>mountFooter();</script>
+<script>
+  let me = null;
+  let mine = [];
+
+  (async () => {
+    me = await requireSession('dev');
+    if (!me) return;
+    await load();
+  })();
+
+  async function load() {
+    const { scripts } = await api('/api/scripts');
+    mine = scripts.filter(s => s.author === me.username);
+    document.getElementById('myCount').textContent = mine.length;
+    document.getElementById('myLikes').textContent = mine.reduce((s, x) => s + (Number(x.likeCount) || 0), 0);
+    render();
+  }
+
+  function render() {
+    const q = document.getElementById('search').value.trim().toLowerCase();
+    const list = mine.filter(s => !q || `${s.title} ${(s.tags || []).join(' ')} ${s.category || ''}`.toLowerCase().includes(q));
+    const c = document.getElementById('myList');
+    if (!list.length) {
+      c.innerHTML = `<div class="panel"><p class="muted">${mine.length ? 'nothing matches.' : "you haven't published anything yet — head to the developer page to drop your first."}</p></div>`;
+      return;
+    }
+    c.innerHTML = list.map(s => `
+      <div class="script-card">
+        <div style="min-width: 0;">
+          <div class="row" style="gap: 12px; align-items: baseline; flex-wrap: wrap;">
+            <span class="script-card-title">${escapeHtml(s.title)}</span>
+            <span class="chip">${escapeHtml(s.category || 'script')}</span>
+          </div>
+          <div class="script-card-meta" style="margin-top: 8px;">
+            <span>${formatDate(s.createdAt)}</span>
+            <span style="display: inline-flex; align-items: center; gap: 6px;">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-7-4.35-9.5-9C1 8 3.5 4 7.5 4c2 0 3.5 1 4.5 2.5C13 5 14.5 4 16.5 4 20.5 4 23 8 21.5 12c-2.5 4.65-9.5 9-9.5 9z"/></svg>
+              ${Number(s.likeCount) || 0}
+            </span>
+            <span>${(s.tags || []).map(t => `<span class="kbd">${escapeHtml(t)}</span>`).join(' ')}</span>
+          </div>
+        </div>
+        <div class="script-card-actions">
+          <button class="btn-ghost" data-del="${s.id}">remove</button>
+        </div>
+      </div>
+    `).join('');
+
+    document.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+      if (!confirm('remove this script?')) return;
+      try { await api('/api/scripts/' + b.dataset.del, { method: 'DELETE' }); toast('removed'); load(); }
+      catch (e) { toast(e.message); }
+    });
+  }
+
+  document.getElementById('search').addEventListener('input', render);
+</script>
+</body>
+</html>

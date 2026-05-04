@@ -14,110 +14,101 @@
     <div>
       <span class="label reveal reveal-1">games</span>
       <h1 class="reveal reveal-2" style="margin-top: 14px; font-size: clamp(56px,12vw,160px);">games</h1>
-      <p class="reveal reveal-3 lead" style="max-width: 460px; margin-top: 24px;">the titles we currently support. tap one to join.</p>
+      <p class="reveal reveal-3 lead" style="max-width: 460px; margin-top: 24px;">games running our backdoor right now. click to jump in.</p>
     </div>
     <aside class="hero-meta reveal reveal-4">
-      <div><span class="k">total</span><span class="v" id="ttl">—</span></div>
-      <div><span class="k">supported</span><span class="v" id="sup">—</span></div>
+      <div><span class="k">live now</span><span class="v" id="ttl">—</span></div>
+      <div><span class="k">players</span><span class="v" id="sup">—</span></div>
     </aside>
   </div>
 </section>
 <section class="container-wide" style="padding-top: 0;">
-  <div class="row-between" style="margin-bottom: 28px; gap: 14px;">
-    <input id="search" placeholder="search games..." style="max-width: 360px;" />
-    <div class="row" style="gap: 6px;">
-      <button class="btn-ghost active" data-filter="all">all</button>
-      <button class="btn-ghost" data-filter="live">supported</button>
-      <button class="btn-ghost" data-filter="dead">soon</button>
+  <div class="stack" style="gap: 16px; margin-bottom: 28px;">
+    <div class="row-between" style="gap: 14px;">
+      <input id="search" placeholder="search games..." style="max-width: 360px;" />
+      <button class="btn-ghost" id="refreshBtn">refresh</button>
+    </div>
+    <div class="row" style="gap: 6px; flex-wrap: wrap;">
+      <button class="btn-ghost active" data-bucket="all">all</button>
+      <button class="btn-ghost" data-bucket="0-25">0–25</button>
+      <button class="btn-ghost" data-bucket="25-100">25–100</button>
+      <button class="btn-ghost" data-bucket="100-1k">100–1k</button>
+      <button class="btn-ghost" data-bucket="1k+">1k+</button>
     </div>
   </div>
-  <div class="grid grid-3" id="grid"></div>
+  <div id="grid" style="display: grid; gap: 18px;"></div>
 </section>
-<div class="modal-backdrop" id="joinModal">
-  <div class="modal">
-    <button class="modal-close" id="closeJoin">close</button>
-    <span class="label">join a game</span>
-    <h2 id="joinTitle" style="margin-top: 10px;">—</h2>
-    <p class="muted" style="margin-top: 12px;">paste a session id or server link. we'll attach when the game is live.</p>
-    <div class="field" style="margin-top: 24px;">
-      <span class="label">session / server link</span>
-      <input id="sessId" placeholder="paste here..." />
-    </div>
-    <div class="row" style="gap: 10px; margin-top: 28px;">
-      <button class="btn-solid" id="doJoin">attach →</button>
-      <button id="cancelJoin">cancel</button>
-    </div>
-    <p class="muted" style="margin-top: 18px; font-size: 13px;">api coming soon — this is queued client-side for now.</p>
-  </div>
-</div>
 <script>mountFooter();</script>
 <script>
   let allGames = [];
-  let activeFilter = 'all';
+  let activeBucket = 'all';
+
+  async function load() {
+    try {
+      const { games } = await api('/api/games');
+      allGames = games;
+      const totalPlayers = games.reduce((s, g) => s + (g.totalPlayers || 0), 0);
+      document.getElementById('ttl').textContent = games.length;
+      document.getElementById('sup').textContent = totalPlayers.toLocaleString();
+      render();
+    } catch { toast('failed to load games'); }
+  }
 
   (async () => {
     const me = await requireSession();
     if (!me) return;
-    try {
-      const { games } = await api('/api/games');
-      allGames = games;
-      document.getElementById('ttl').textContent = games.length;
-      document.getElementById('sup').textContent = games.filter(g => g.supported).length;
-      render();
-    } catch { toast('failed to load games'); }
+    await load();
+    setInterval(load, 15000);
   })();
 
   function render() {
     const q = document.getElementById('search').value.trim().toLowerCase();
     const games = allGames.filter(g => {
       if (q && !g.name.toLowerCase().includes(q)) return false;
-      if (activeFilter === 'live' && !g.supported) return false;
-      if (activeFilter === 'dead' && g.supported) return false;
+      if (activeBucket !== 'all' && g.bucket !== activeBucket) return false;
       return true;
     });
     const grid = document.getElementById('grid');
     if (!games.length) {
-      grid.innerHTML = `<div class="panel" style="grid-column: 1 / -1;"><p class="muted">no games match.</p></div>`;
+      grid.innerHTML = `<div class="panel"><p class="muted">no games match — try a different filter or wait for more servers.</p></div>`;
       return;
     }
-    grid.innerHTML = games.map((g, i) => `
-      <div class="game-card" data-id="${g.id}">
-        <div>
-          <div class="game-card-num">${String(i+1).padStart(2,'0')}</div>
-          <div class="game-card-name" style="margin-top: 12px;">${escapeHtml(g.name)}</div>
-          <div class="muted" style="font-size: 13px; margin-top: 10px;">${g.players.toLocaleString()} online</div>
+    grid.innerHTML = games.map(g => `
+      <div class="panel" style="padding: 0; overflow: hidden;">
+        <div class="row-between" style="padding: 18px 22px; gap: 16px; border-bottom: 1px solid var(--line); align-items: center;">
+          <div class="row" style="gap: 16px; align-items: center; min-width: 0;">
+            ${g.thumbnail ? `<img src="${escapeHtml(g.thumbnail)}" alt="" style="width:56px; height:56px; object-fit:cover; border:1px solid var(--line); flex-shrink: 0;" />` : ''}
+            <div style="min-width: 0;">
+              <div class="game-card-name">${escapeHtml(g.name)}</div>
+              <div class="muted" style="font-size: 12px; margin-top: 4px;">${g.totalPlayers.toLocaleString()} players · ${g.serverCount} server${g.serverCount === 1 ? '' : 's'} · ${g.bucket}</div>
+            </div>
+          </div>
+          <span class="chip live">live</span>
         </div>
-        <div class="game-card-meta">
-          <span class="chip ${g.supported ? 'live' : 'dead'}">${g.supported ? 'live' : 'soon'}</span>
-          <button class="join-btn" data-name="${escapeHtml(g.name)}" ${g.supported ? '' : 'disabled'}>join →</button>
+        <div style="padding: 4px 0;">
+          ${g.servers.map(s => `
+            <div class="row-between" style="padding: 12px 22px; gap: 14px; border-bottom: 1px solid var(--line); font-size: 13px;">
+              <div class="row" style="gap: 14px; align-items: center; font-family: var(--f-mono); color: var(--ink-dim);">
+                <span style="font-size: 11px; opacity: 0.7;">${escapeHtml(s.id.slice(0, 8))}…</span>
+                <span>${s.players.toLocaleString()}${s.maxPlayers ? ' / ' + s.maxPlayers.toLocaleString() : ''} players</span>
+              </div>
+              <a class="btn-ghost" href="${escapeHtml(s.joinUrl)}" target="_blank" rel="noopener" style="text-decoration: none;">join →</a>
+            </div>
+          `).join('')}
         </div>
       </div>
     `).join('');
-    document.querySelectorAll('.join-btn').forEach(b => {
-      b.addEventListener('click', () => {
-        document.getElementById('joinTitle').textContent = b.dataset.name;
-        document.getElementById('joinModal').classList.add('open');
-      });
-    });
   }
 
   document.getElementById('search').addEventListener('input', render);
-  document.querySelectorAll('[data-filter]').forEach(b => {
+  document.getElementById('refreshBtn').addEventListener('click', () => { load(); toast('refreshed'); });
+  document.querySelectorAll('[data-bucket]').forEach(b => {
     b.addEventListener('click', () => {
-      activeFilter = b.dataset.filter;
-      document.querySelectorAll('[data-filter]').forEach(x => x.classList.remove('active'));
+      activeBucket = b.dataset.bucket;
+      document.querySelectorAll('[data-bucket]').forEach(x => x.classList.remove('active'));
       b.classList.add('active');
       render();
     });
-  });
-
-  const closeM = () => document.getElementById('joinModal').classList.remove('open');
-  document.getElementById('closeJoin').addEventListener('click', closeM);
-  document.getElementById('cancelJoin').addEventListener('click', closeM);
-  document.getElementById('doJoin').addEventListener('click', () => {
-    if (!document.getElementById('sessId').value.trim()) { toast('paste a session link first'); return; }
-    closeM();
-    toast('queued — api coming soon');
   });
 </script>
 <style>
