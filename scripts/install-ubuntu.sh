@@ -59,8 +59,18 @@ if ! id -u "$APP_USER" >/dev/null 2>&1; then
   useradd --system --home "$REPO_DIR" --shell /usr/sbin/nologin "$APP_USER"
 fi
 
-echo "==> installing dependencies"
-sudo -u "$APP_USER" -H bash -c "cd '$REPO_DIR' && npm ci --omit=dev || npm install --omit=dev"
+echo "==> installing dependencies (as root, so it works regardless of repo owner)"
+( cd "$REPO_DIR" && (npm ci --omit=dev || npm install --omit=dev) )
+
+# the service user only needs to *read* the code (write access would be bad anyway).
+# make sure the parent dirs are traversable and the repo is world-readable.
+PARENT="$REPO_DIR"
+while [[ "$PARENT" != "/" && "$PARENT" != "" ]]; do
+  chmod a+x "$PARENT" 2>/dev/null || true
+  PARENT="$(dirname "$PARENT")"
+done
+find "$REPO_DIR" -type d -exec chmod a+rx {} + 2>/dev/null || true
+find "$REPO_DIR" -type f -exec chmod a+r  {} + 2>/dev/null || true
 
 echo "==> writing $ENV_FILE"
 if [[ ! -f "$ENV_FILE" ]]; then
