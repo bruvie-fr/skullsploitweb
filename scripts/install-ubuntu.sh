@@ -64,16 +64,25 @@ sudo -u "$APP_USER" -H bash -c "cd '$REPO_DIR' && npm ci --omit=dev || npm insta
 echo "==> writing $ENV_FILE"
 if [[ ! -f "$ENV_FILE" ]]; then
   SESSION_SECRET="$(head -c 48 /dev/urandom | xxd -p -c 96)"
+  OWNER="${OWNER_USERNAME:-bruvo}"
+  SEED_USER="${SEED_DEV_USERNAME:-$OWNER}"
+  SEED_PASS="${SEED_DEV_PASSWORD:-$(head -c 12 /dev/urandom | xxd -p)}"
   cat >"$ENV_FILE" <<EOF
 NODE_ENV=production
 PORT=3000
 SESSION_SECRET=$SESSION_SECRET
-SEED_DEV_USERNAME=${SEED_DEV_USERNAME:-admin}
-SEED_DEV_PASSWORD=${SEED_DEV_PASSWORD:-$(head -c 16 /dev/urandom | xxd -p)}
+OWNER_USERNAME=$OWNER
+SEED_DEV_USERNAME=$SEED_USER
+SEED_DEV_PASSWORD=$SEED_PASS
 EOF
   chmod 600 "$ENV_FILE"
   chown "$APP_USER":"$APP_USER" "$ENV_FILE"
-  echo "   .env created. seeded dev credentials are inside — read it once and store them safely."
+  echo
+  echo "   first-run credentials (also saved in $ENV_FILE):"
+  echo "     username: $SEED_USER  (this is the owner)"
+  echo "     password: $SEED_PASS"
+  echo "   sign in once, then store these somewhere safe."
+  echo
 else
   echo "   .env already exists, leaving it alone."
 fi

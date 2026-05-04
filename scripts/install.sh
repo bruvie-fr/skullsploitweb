@@ -30,16 +30,24 @@ fi
 if [[ ! -f .env ]]; then
   echo "==> creating .env"
   SECRET="$(node -e "console.log(require('crypto').randomBytes(48).toString('hex'))")"
-  PASS="$(node -e "console.log(require('crypto').randomBytes(8).toString('hex'))")"
+  OWNER="${OWNER_USERNAME:-bruvo}"
+  SEED_USER="${SEED_DEV_USERNAME:-$OWNER}"
+  SEED_PASS="${SEED_DEV_PASSWORD:-$(node -e "console.log(require('crypto').randomBytes(12).toString('hex'))")}"
   cat >.env <<EOF
 NODE_ENV=production
 PORT=3000
 SESSION_SECRET=$SECRET
-SEED_DEV_USERNAME=admin
-SEED_DEV_PASSWORD=$PASS
+OWNER_USERNAME=$OWNER
+SEED_DEV_USERNAME=$SEED_USER
+SEED_DEV_PASSWORD=$SEED_PASS
 EOF
   chmod 600 .env
-  echo "   .env created. seeded credentials are inside — read it once and store them safely."
+  echo
+  echo "   first-run credentials (also saved in .env):"
+  echo "     username: $SEED_USER  (this is the owner)"
+  echo "     password: $SEED_PASS"
+  echo "   sign in once, then store these somewhere safe."
+  echo
 else
   echo "==> .env already exists, leaving it alone"
 fi

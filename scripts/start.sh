@@ -23,6 +23,10 @@ if [[ -f .env ]]; then
   set +a
 fi
 
+if [[ ! -f data/devs.json ]] && [[ -n "${SEED_DEV_USERNAME-}" ]]; then
+  echo "first run — server will seed owner '${SEED_DEV_USERNAME}' on boot. password is in .env."
+fi
+
 # prefer systemd if a unit is installed
 if command -v systemctl >/dev/null 2>&1 && systemctl list-unit-files 2>/dev/null | grep -q '^skullsploit.service'; then
   echo "==> starting via systemd"
