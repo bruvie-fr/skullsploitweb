@@ -4,12 +4,13 @@
 # and points a domain at the app.
 #
 # usage:
-#   sudo DOMAIN=skullsploit.example.com bash scripts/install-ubuntu.sh
-#   sudo DOMAIN=skullsploit.example.com SEED_DEV_USERNAME=root SEED_DEV_PASSWORD='something-strong' bash scripts/install-ubuntu.sh
+#   sudo bash scripts/install-ubuntu.sh                                       # uses skullsploit.duckdns.org
+#   sudo DOMAIN=mydomain.com bash scripts/install-ubuntu.sh                   # custom domain
+#   sudo SEED_DEV_PASSWORD='strong' bash scripts/install-ubuntu.sh            # set initial password
 #
 # notes:
 #   - run from the repo root (the script expects ./server.js next to it)
-#   - DOMAIN must already point to this server's public IP (A record).
+#   - the domain must already point to this server's public IP (A record).
 #     for DuckDNS: set the A record on duckdns.org first.
 #   - Caddy will request a free Let's Encrypt cert automatically. ports 80 + 443 must be open.
 
@@ -20,7 +21,7 @@ if [[ "$EUID" -ne 0 ]]; then
   exit 1
 fi
 
-: "${DOMAIN:?set DOMAIN, e.g. DOMAIN=skullsploit.duckdns.org}"
+DOMAIN="${DOMAIN:-skullsploit.duckdns.org}"
 
 REPO_DIR="$(pwd)"
 APP_USER="skullsploit"
