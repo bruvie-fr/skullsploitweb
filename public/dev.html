@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>developer · skullsploit</title>
+<link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+<script src="/js/common.js"></script>
+<script>mountNav('/dev');</script>
+<section class="hero" style="padding-top: clamp(60px,8vw,100px); padding-bottom: clamp(40px,5vw,60px);">
+  <div class="hero-grid">
+    <div>
+      <span class="label reveal reveal-1">developer hub</span>
+      <h1 class="reveal reveal-2" style="margin-top: 14px; font-size: clamp(56px,12vw,140px);">workshop<span class="cursor"></span></h1>
+      <p class="reveal reveal-3 lead" style="max-width: 520px; margin-top: 24px;">mint invite keys for new members and publish scripts to the hub.</p>
+    </div>
+    <aside class="hero-meta reveal reveal-4">
+      <div><span class="k">keys total</span><span class="v" id="kT">—</span></div>
+      <div><span class="k">keys active</span><span class="v" id="kA">—</span></div>
+      <div><span class="k">your scripts</span><span class="v" id="myCount">—</span></div>
+    </aside>
+  </div>
+</section>
+<section class="container-wide" style="padding-top: 0;">
+  <div class="grid grid-2" style="margin-bottom: 60px;">
+    <div class="panel-flush" style="border-right: 1px solid var(--line);">
+      <span class="label">mint invite keys</span>
+      <h2 style="margin-top: 8px;">create keys</h2>
+      <p class="muted" style="margin-top: 10px;">each key creates one new member account. set how long it stays valid.</p>
+      <form id="mintForm" style="margin-top: 28px;">
+        <div class="form-row">
+          <div class="field">
+            <span class="label">how many</span>
+            <input id="mCount" type="number" min="1" max="100" value="1" />
+          </div>
+          <div class="field">
+            <span class="label">expires in</span>
+            <select id="mTtl">
+              <option value="0">never (infinite)</option>
+              <option value="1">1 hour</option>
+              <option value="24" selected>1 day</option>
+              <option value="168">7 days</option>
+              <option value="720">30 days</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <span class="label">note (optional)</span>
+          <input id="mNote" placeholder="who's this for?" />
+        </div>
+        <button class="btn-solid" type="submit">mint →</button>
+      </form>
+      <div id="mintedBox" style="margin-top: 24px;"></div>
+    </div>
+    <div class="panel-flush">
+      <span class="label">your invite keys</span>
+      <h2 style="margin-top: 8px;">registry</h2>
+      <p class="muted" style="margin-top: 10px;">all the keys you've issued. revoke or remove at any time.</p>
+      <div class="table-wrap" style="margin-top: 28px; max-height: 480px; overflow: auto; border: 1px solid var(--line);">
+        <table>
+          <thead><tr><th>key</th><th>expires</th><th>status</th><th></th></tr></thead>
+          <tbody id="keysBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="grid grid-2">
+    <div class="panel-flush" style="border-right: 1px solid var(--line);">
+      <span class="label">publish a script</span>
+      <h2 style="margin-top: 8px;">drop something new</h2>
+      <p class="muted" style="margin-top: 10px;">give it a title, optional tags, and the body. that's it.</p>
+      <form id="pub" style="margin-top: 28px;">
+        <div class="field">
+          <span class="label">title</span>
+          <input id="t" required maxlength="80" placeholder="e.g. Universal ESP" />
+        </div>
+        <div class="field">
+          <span class="label">tags (comma separated, optional)</span>
+          <input id="tg" placeholder="esp, visual, util" />
+        </div>
+        <div class="field">
+          <span class="label">script body</span>
+          <textarea id="b" required placeholder="-- paste your code here&#10;print('hello')"></textarea>
+        </div>
+        <button class="btn-solid" type="submit">publish →</button>
+      </form>
+    </div>
+    <div class="panel-flush">
+      <span class="label">your published scripts</span>
+      <h2 style="margin-top: 8px;">your drops</h2>
+      <p class="muted" style="margin-top: 10px;">scripts you've shared with the community.</p>
+      <div id="myList" style="margin-top: 28px;"></div>
+    </div>
+  </div>
+</section>
+<script>mountFooter();</script>
+<script>
+  let me = null;
+
+  (async () => {
+    me = await requireSession('dev');
+    if (!me) return;
+    await Promise.all([loadKeys(), loadScripts()]);
+  })();
+
+  async function loadKeys() {
+    const { keys } = await api('/api/keys');
+    document.getElementById('kT').textContent = keys.length;
+    const active = keys.filter(k => !k.revoked && !k.consumed && (!k.expiresAt || new Date(k.expiresAt) > new Date()));
+    document.getElementById('kA').textContent = active.length;
+
+    document.getElementById('keysBody').innerHTML = keys.length ? keys.slice().reverse().map(k => {
+      const expired = k.expiresAt && new Date(k.expiresAt) < new Date();
+      const status = k.revoked ? 'revoked' : k.consumed ? 'used' : expired ? 'expired' : 'active';
+      const cls = (k.revoked || expired || k.consumed) ? 'dead' : 'live';
+      return `
+        <tr>
+          <td class="code"><span style="cursor:pointer" data-copy="${escapeHtml(k.key)}" title="copy">${escapeHtml(k.key)}</span></td>
+          <td>${k.expiresAt ? timeUntil(k.expiresAt) : 'never'}</td>
+          <td><span class="chip ${cls}">${status}</span></td>
+          <td class="actions">
+            ${!k.revoked && !k.consumed ? `<button data-rev="${escapeHtml(k.key)}" class="btn-ghost">revoke</button>` : ''}
+            <button data-del="${escapeHtml(k.key)}" class="btn-ghost">remove</button>
+          </td>
+        </tr>`;
+    }).join('') : `<tr><td colspan="4" class="muted">no keys yet — mint your first one ↖</td></tr>`;
+
+    document.querySelectorAll('[data-rev]').forEach(b => b.onclick = async () => {
+      await api(`/api/keys/${encodeURIComponent(b.dataset.rev)}/revoke`, { method: 'POST' });
+      toast('key revoked'); loadKeys();
+    });
+    document.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+      if (!confirm('remove this key permanently?')) return;
+      await api(`/api/keys/${encodeURIComponent(b.dataset.del)}`, { method: 'DELETE' });
+      toast('key removed'); loadKeys();
+    });
+    document.querySelectorAll('[data-copy]').forEach(s => s.onclick = () => {
+      navigator.clipboard.writeText(s.dataset.copy); toast('copied');
+    });
+  }
+
+  async function loadScripts() {
+    const { scripts } = await api('/api/scripts');
+    const mine = scripts.filter(s => s.author === me.username);
+    document.getElementById('myCount').textContent = mine.length;
+
+    document.getElementById('myList').innerHTML = mine.length ? mine.map(s => `
+      <div class="script-card">
+        <div style="min-width: 0;">
+          <div class="script-card-title">${escapeHtml(s.title)}</div>
+          <div class="script-card-meta" style="margin-top: 8px;">
+            <span>${formatDate(s.createdAt)}</span>
+            <span style="display: inline-flex; align-items: center; gap: 6px;">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-7-4.35-9.5-9C1 8 3.5 4 7.5 4c2 0 3.5 1 4.5 2.5C13 5 14.5 4 16.5 4 20.5 4 23 8 21.5 12c-2.5 4.65-9.5 9-9.5 9z"/></svg>
+              ${Number(s.likeCount) || 0}
+            </span>
+            <span>${(s.tags || []).map(t => `<span class="kbd">${escapeHtml(t)}</span>`).join(' ')}</span>
+          </div>
+        </div>
+        <div class="script-card-actions">
+          <button class="btn-ghost" data-del="${s.id}">remove</button>
+        </div>
+      </div>
+    `).join('') : `<div class="panel"><p class="muted">nothing here yet — publish your first script on the left.</p></div>`;
+
+    document.querySelectorAll('#myList [data-del]').forEach(b => b.onclick = async () => {
+      if (!confirm('remove this script?')) return;
+      try { await api('/api/scripts/' + b.dataset.del, { method: 'DELETE' }); toast('removed'); loadScripts(); }
+      catch (e) { toast(e.message); }
+    });
+  }
+
+  document.getElementById('mintForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      const r = await api('/api/keys', {
+        method: 'POST',
+        body: {
+          count: parseInt(document.getElementById('mCount').value, 10),
+          durationHours: parseInt(document.getElementById('mTtl').value, 10),
+          note: document.getElementById('mNote').value
+        }
+      });
+      const ttlLabel = document.getElementById('mTtl').selectedOptions[0].textContent;
+      document.getElementById('mintedBox').innerHTML = `
+        <span class="label">${r.minted.length} key${r.minted.length>1?'s':''} minted · expires ${ttlLabel}</span>
+        <pre class="code-block" style="margin-top: 10px;">${r.minted.map(k => k.key).join('\n')}</pre>
+        <button class="btn-ghost" id="copyAll" style="margin-top: 10px;">copy all</button>
+      `;
+      document.getElementById('copyAll').onclick = () => {
+        navigator.clipboard.writeText(r.minted.map(k => k.key).join('\n'));
+        toast('copied all keys');
+      };
+      toast(`${r.minted.length} key${r.minted.length>1?'s':''} minted`);
+      loadKeys();
+    } catch (e2) { toast(e2.message); }
+  });
+
+  document.getElementById('pub').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      await api('/api/scripts', {
+        method: 'POST',
+        body: {
+          title: document.getElementById('t').value.trim(),
+          tags: document.getElementById('tg').value.split(',').map(s => s.trim()).filter(Boolean),
+          body: document.getElementById('b').value
+        }
+      });
+      document.getElementById('t').value = '';
+      document.getElementById('tg').value = '';
+      document.getElementById('b').value = '';
+      toast('published');
+      loadScripts();
+    } catch (e2) { toast(e2.message); }
+  });
+</script>
+</body>
+</html>

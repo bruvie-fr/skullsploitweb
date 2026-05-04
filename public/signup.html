@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>create account · skullsploit</title>
+<link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+<div class="split">
+  <aside class="split-side">
+    <div class="reveal reveal-1" style="position: relative; z-index: 2;">
+      <a href="/" class="row" style="gap: 12px; text-decoration: none;">
+        <span class="skull-mark" id="brand-skull" style="width: 36px; height: 36px;"></span>
+        <span class="display" style="font-size: 26px;">skullsploit</span>
+      </a>
+    </div>
+    <div class="split-side-skull reveal reveal-2" id="big-skull"></div>
+    <div class="reveal reveal-3" style="position: relative; z-index: 2;">
+      <p class="serif-it dim" style="max-width: 320px;">accounts are invite-only. ask one of our developers for a key.</p>
+    </div>
+  </aside>
+  <section class="split-form">
+    <div class="row-between reveal reveal-1">
+      <span class="label">create account</span>
+      <a href="/" class="label" style="color: var(--ink-dim);">← back</a>
+    </div>
+    <div style="margin-top: 56px;">
+      <h1 class="welcome-h reveal reveal-2">say hello<span class="cursor"></span></h1>
+      <p class="welcome-sub reveal reveal-3">paste your invite key, pick a name and a password. that's all.</p>
+      <form id="form" class="reveal reveal-4" style="margin-top: 40px; max-width: 520px;">
+        <div class="field">
+          <span class="label">invite key</span>
+          <input id="key" placeholder="SKL-XXXX-XXXX-XXXX-XXXX-XXXX-XXXX" spellcheck="false" autocomplete="off" autocapitalize="off" required />
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <span class="label">username</span>
+            <input id="u" autocomplete="username" required minlength="3" maxlength="24" />
+          </div>
+          <div class="field">
+            <span class="label">password</span>
+            <input id="p" type="password" autocomplete="new-password" required minlength="6" />
+          </div>
+        </div>
+        <div class="row" style="margin-top: 28px; gap: 10px;">
+          <button type="submit" class="btn-solid" id="btn">create account →</button>
+          <a href="/login" class="btn-ghost">already have one?</a>
+        </div>
+        <div id="err" class="errbox"></div>
+      </form>
+    </div>
+    <div class="row-between reveal reveal-5" style="font-family: var(--f-mono); font-size: 11px; color: var(--ink-faint);">
+      <span>© skullsploit</span>
+      <span class="serif-it">welcome aboard.</span>
+    </div>
+  </section>
+</div>
+<script src="/js/common.js"></script>
+<script>
+  document.getElementById('brand-skull').innerHTML = SKULL_SVG;
+  document.getElementById('big-skull').innerHTML = SKULL_LARGE;
+
+  api('/api/session').then(s => { if (s.user) window.location.href = '/dashboard'; }).catch(()=>{});
+
+  const key = document.getElementById('key');
+  key.addEventListener('input', (e) => {
+    let v = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (v.startsWith('SKL')) v = v.slice(3);
+    const parts = [];
+    for (let i = 0; i < v.length && i < 24; i += 4) parts.push(v.slice(i, i + 4));
+    e.target.value = (v ? 'SKL-' : '') + parts.join('-');
+  });
+
+  const f = document.getElementById('form');
+  const err = document.getElementById('err');
+  const btn = document.getElementById('btn');
+  f.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    err.textContent = '';
+    btn.disabled = true; btn.textContent = 'creating...';
+    try {
+      await api('/api/auth/signup', {
+        method: 'POST',
+        body: {
+          key: document.getElementById('key').value.trim(),
+          username: document.getElementById('u').value.trim(),
+          password: document.getElementById('p').value
+        }
+      });
+      btn.textContent = 'welcome →';
+      setTimeout(() => window.location.href = '/dashboard', 350);
+    } catch (e2) {
+      err.textContent = e2.message;
+      btn.disabled = false; btn.textContent = 'create account →';
+    }
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>skullsploit</title>
+<link rel="stylesheet" href="/css/style.css" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%23ece9e3' d='M32 4C18.7 4 8 14.7 8 28c0 7.4 3.3 14 8.5 18.4V54c0 1.7 1.3 3 3 3h25c1.7 0 3-1.3 3-3v-7.6C52.7 42 56 35.4 56 28 56 14.7 45.3 4 32 4zm-9 22a4 4 0 1 1 0 8 4 4 0 0 1 0-8zm18 0a4 4 0 1 1 0 8 4 4 0 0 1 0-8zM26 42c0-1.1.9-2 2-2h8c1.1 0 2 .9 2 2v6h-3v-3h-2v3h-2v-3h-2v3h-3v-6z'/%3E%3C/svg%3E" />
+</head>
+<body>
+<div class="split">
+  <aside class="split-side">
+    <div class="reveal reveal-1" style="position: relative; z-index: 2;">
+      <div class="row" style="gap: 12px;">
+        <span class="skull-mark" id="brand-skull" style="width: 36px; height: 36px;"></span>
+        <span class="display" style="font-size: 26px;">skullsploit</span>
+      </div>
+    </div>
+    <div class="split-side-skull reveal reveal-2" id="big-skull"></div>
+    <div class="reveal reveal-3" style="position: relative; z-index: 2;">
+      <p class="serif-it dim" style="max-width: 320px;">a serverside for skids.</p>
+    </div>
+  </aside>
+  <section class="split-form">
+    <div class="row-between reveal reveal-1">
+      <span class="label">welcome</span>
+      <span class="label" id="clock">—</span>
+    </div>
+    <div style="margin-top: 60px;">
+      <h1 class="welcome-h reveal reveal-2">make yourself<br/>at home<span class="cursor"></span></h1>
+      <p class="welcome-sub reveal reveal-3">sign in if you've been here before. or create an account using an invite key from one of our developers.</p>
+      <div class="row reveal reveal-4" style="gap: 12px; margin-top: 48px;">
+        <a href="/login" class="btn btn-solid">sign in</a>
+        <a href="/signup" class="btn">create account</a>
+      </div>
+    </div>
+    <div class="row-between reveal reveal-5" style="font-family: var(--f-mono); font-size: 11px; color: var(--ink-faint);">
+      <span>© skullsploit</span>
+      <span class="serif-it">be kind out there.</span>
+    </div>
+  </section>
+</div>
+<script src="/js/common.js"></script>
+<script>
+  document.getElementById('brand-skull').innerHTML = SKULL_SVG;
+  document.getElementById('big-skull').innerHTML = SKULL_LARGE;
+
+  const fmt = n => String(n).padStart(2, '0');
+  const tick = () => {
+    const d = new Date();
+    document.getElementById('clock').textContent = `${fmt(d.getHours())}:${fmt(d.getMinutes())}`;
+  };
+  tick(); setInterval(tick, 30000);
+
+  // already logged in? skip
+  api('/api/session').then(s => { if (s.user) window.location.href = '/dashboard'; }).catch(()=>{});
+</script>
+</body>
+</html>

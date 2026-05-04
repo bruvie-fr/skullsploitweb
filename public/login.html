@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>sign in · skullsploit</title>
+<link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+<div class="split">
+  <aside class="split-side">
+    <div class="reveal reveal-1" style="position: relative; z-index: 2;">
+      <a href="/" class="row" style="gap: 12px;">
+        <span class="skull-mark" id="brand-skull" style="width: 36px; height: 36px;"></span>
+        <span class="display" style="font-size: 26px;">skullsploit</span>
+      </a>
+    </div>
+    <div class="split-side-skull reveal reveal-2" id="big-skull"></div>
+    <div class="reveal reveal-3" style="position: relative; z-index: 2;">
+      <p class="serif-it dim" style="max-width: 320px;">good to see you again.</p>
+    </div>
+  </aside>
+  <section class="split-form">
+    <div class="row-between reveal reveal-1">
+      <span class="label">sign in</span>
+      <a href="/" class="label" style="color: var(--ink-dim);">← back</a>
+    </div>
+    <div style="margin-top: 56px;">
+      <h1 class="welcome-h reveal reveal-2">welcome back<span class="cursor"></span></h1>
+      <p class="welcome-sub reveal reveal-3">developers and members sign in here. one form for everyone.</p>
+      <form id="form" class="reveal reveal-4" style="margin-top: 40px; max-width: 460px;">
+        <div class="field">
+          <span class="label">username</span>
+          <input id="u" autocomplete="username" required />
+        </div>
+        <div class="field">
+          <span class="label">password</span>
+          <input id="p" type="password" autocomplete="current-password" required />
+        </div>
+        <div class="row" style="margin-top: 28px; gap: 10px;">
+          <button type="submit" class="btn-solid" id="btn">sign in →</button>
+          <a href="/signup" class="btn-ghost">need an account?</a>
+        </div>
+        <div id="err" class="errbox"></div>
+      </form>
+    </div>
+    <div class="row-between reveal reveal-5" style="font-family: var(--f-mono); font-size: 11px; color: var(--ink-faint);">
+      <span>© skullsploit</span>
+      <span class="serif-it">come on in.</span>
+    </div>
+  </section>
+</div>
+<script src="/js/common.js"></script>
+<script>
+  document.getElementById('brand-skull').innerHTML = SKULL_SVG;
+  document.getElementById('big-skull').innerHTML = SKULL_LARGE;
+
+  api('/api/session').then(s => { if (s.user) window.location.href = s.user.kind === 'dev' ? '/dev' : '/dashboard'; }).catch(()=>{});
+
+  const f = document.getElementById('form');
+  const err = document.getElementById('err');
+  const btn = document.getElementById('btn');
+  f.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    err.textContent = '';
+    btn.disabled = true; btn.textContent = 'signing in...';
+    try {
+      const r = await api('/api/auth/login', {
+        method: 'POST',
+        body: { username: document.getElementById('u').value.trim(), password: document.getElementById('p').value }
+      });
+      btn.textContent = 'welcome →';
+      setTimeout(() => window.location.href = r.user.kind === 'dev' ? '/dev' : '/dashboard', 250);
+    } catch (e2) {
+      err.textContent = e2.message;
+      btn.disabled = false; btn.textContent = 'sign in →';
+    }
+  });
+</script>
+</body>
+</html>

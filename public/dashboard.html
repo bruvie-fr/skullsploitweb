@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>home · skullsploit</title>
+<link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+<script src="/js/common.js"></script>
+<script>mountNav('/dashboard');</script>
+<section class="hero">
+  <div class="hero-grid">
+    <div>
+      <span class="label reveal reveal-1">home</span>
+      <h1 class="reveal reveal-2" style="margin-top: 14px;">welcome<br/><span id="welcomeName" class="serif-it dim" style="font-family: var(--f-body); font-size: clamp(28px,4vw,52px); line-height: 1.1;">friend</span><span class="cursor"></span></h1>
+      <p class="reveal reveal-3 lead" style="max-width: 520px; margin-top: 28px;">make yourself at home. browse what's supported, grab a script, hop into a game.</p>
+    </div>
+    <aside class="hero-meta reveal reveal-4">
+      <div><span class="k">today</span><span class="v" id="today">—</span></div>
+      <div><span class="k">your role</span><span class="v" id="role">—</span></div>
+      <div><span class="k">since</span><span class="v">just now</span></div>
+    </aside>
+  </div>
+</section>
+<div class="stats" style="grid-template-columns: repeat(3, 1fr);">
+  <div class="stat">
+    <div class="stat-label">scripts</div>
+    <div class="stat-value" id="stScripts">—</div>
+    <div class="stat-sub">ready to use</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">games</div>
+    <div class="stat-value" id="stGames">—</div>
+    <div class="stat-sub">currently supported</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">developers</div>
+    <div class="stat-value">few</div>
+    <div class="stat-sub">but they're great</div>
+  </div>
+</div>
+<section class="container-wide">
+  <div class="section-head">
+    <h2>recent scripts</h2>
+    <a href="/scripts" class="label">see all →</a>
+  </div>
+  <div class="grid grid-3" id="featGrid"></div>
+</section>
+<section class="container-wide" style="padding-top: 0;">
+  <div class="section-head">
+    <h2>games</h2>
+    <a href="/games" class="label">full list →</a>
+  </div>
+  <div class="grid grid-4" id="gameGrid"></div>
+</section>
+<script>mountFooter();</script>
+<script>
+  (async () => {
+    const me = await requireSession();
+    if (!me) return;
+
+    document.getElementById('welcomeName').textContent = me.username;
+    document.getElementById('role').textContent = me.kind === 'dev' ? 'developer' : 'member';
+    const d = new Date();
+    document.getElementById('today').textContent = d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+
+    try {
+      const { scripts } = await api('/api/scripts');
+      document.getElementById('stScripts').textContent = scripts.length;
+      const top = scripts.slice(0, 6);
+      document.getElementById('featGrid').innerHTML = top.length ? top.map(s => `
+        <a href="/scripts" class="game-card" style="text-decoration: none;">
+          <div>
+            <div class="game-card-num">script</div>
+            <div class="game-card-name" style="margin-top: 12px;">${escapeHtml(s.title)}</div>
+          </div>
+          <div class="game-card-meta">
+            <span>by ${escapeHtml(s.author)}</span>
+            <span style="display: inline-flex; align-items: center; gap: 6px; color: var(--ink);">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21s-7-4.35-9.5-9C1 8 3.5 4 7.5 4c2 0 3.5 1 4.5 2.5C13 5 14.5 4 16.5 4 20.5 4 23 8 21.5 12c-2.5 4.65-9.5 9-9.5 9z"/></svg>
+              <span>${Number(s.likeCount) || 0}</span>
+            </span>
+          </div>
+        </a>
+      `).join('') : `<div class="panel" style="grid-column: 1 / -1;"><p class="muted">no scripts yet — check back soon.</p></div>`;
+    } catch {}
+
+    try {
+      const { games } = await api('/api/games');
+      document.getElementById('stGames').textContent = games.filter(g => g.supported).length;
+      const top = games.slice(0, 4);
+      document.getElementById('gameGrid').innerHTML = top.map((g, i) => `
+        <a href="/games" class="game-card" style="text-decoration: none;">
+          <div>
+            <div class="game-card-num">${String(i+1).padStart(2,'0')} / ${String(games.length).padStart(2,'0')}</div>
+            <div class="game-card-name" style="margin-top: 12px;">${escapeHtml(g.name)}</div>
+          </div>
+          <div class="game-card-meta">
+            <span>${g.players.toLocaleString()} online</span>
+            <span class="chip ${g.supported ? 'live' : 'dead'}">${g.supported ? 'live' : 'soon'}</span>
+          </div>
+        </a>
+      `).join('');
+    } catch {}
+  })();
+</script>
+</body>
+</html>
