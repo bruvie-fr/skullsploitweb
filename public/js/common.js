@@ -67,6 +67,7 @@
       links.push({ href: '/dev',    label: 'Developer' });
       links.push({ href: '/drops',  label: 'Drops' });
       links.push({ href: '/logs',   label: 'Logs' });
+      if (me.isOwner) links.push({ href: '/owner', label: 'Owner' });
     }
 
     const linkHtml = links.map(l => `<li><a href="${l.href}" class="${l.href === active ? 'active' : ''}">${l.label}</a></li>`).join('');

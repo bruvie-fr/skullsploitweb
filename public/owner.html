@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>owner · skullsploit</title>
+<link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+<script src="/js/common.js"></script>
+<script>mountNav('/owner');</script>
+<section class="hero" style="padding-top: clamp(60px,8vw,100px); padding-bottom: clamp(40px,5vw,60px);">
+  <div class="hero-grid">
+    <div>
+      <span class="label reveal reveal-1">owner</span>
+      <h1 class="reveal reveal-2" style="margin-top: 14px; font-size: clamp(56px,12vw,140px);">control<span class="cursor"></span></h1>
+      <p class="reveal reveal-3 lead" style="max-width: 540px; margin-top: 24px;">add and remove developers. only you see this page.</p>
+    </div>
+    <aside class="hero-meta reveal reveal-4">
+      <div><span class="k">total devs</span><span class="v" id="devT">—</span></div>
+      <div><span class="k">added by you</span><span class="v" id="devA">—</span></div>
+    </aside>
+  </div>
+</section>
+<section class="container-wide" style="padding-top: 0;">
+  <div class="grid grid-2" style="margin-bottom: 60px;">
+    <div class="panel-flush" style="border-right: 1px solid var(--line);">
+      <span class="label">create dev account</span>
+      <h2 style="margin-top: 8px;">add a developer</h2>
+      <p class="muted" style="margin-top: 10px;">they'll be able to mint keys, publish scripts, and view execution logs. they can't manage devs.</p>
+      <form id="addForm" style="margin-top: 28px;">
+        <div class="field">
+          <span class="label">username</span>
+          <input id="aUser" required minlength="3" maxlength="24" pattern="[a-zA-Z0-9_-]+" placeholder="letters, numbers, _ or -" />
+        </div>
+        <div class="field">
+          <span class="label">password</span>
+          <input id="aPass" type="password" required minlength="8" maxlength="128" placeholder="8 characters minimum" />
+        </div>
+        <button class="btn-solid" type="submit">add →</button>
+      </form>
+      <div id="addResult" style="margin-top: 18px;"></div>
+    </div>
+    <div class="panel-flush">
+      <span class="label">developer registry</span>
+      <h2 style="margin-top: 8px;">all devs</h2>
+      <p class="muted" style="margin-top: 10px;">your account is protected — you can't remove yourself here. for that, edit data/devs.json directly.</p>
+      <div class="table-wrap" style="margin-top: 28px; max-height: 520px; overflow: auto; border: 1px solid var(--line);">
+        <table>
+          <thead><tr><th>username</th><th>added</th><th>added by</th><th></th></tr></thead>
+          <tbody id="devsBody"><tr><td colspan="4" class="muted">loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+<script>mountFooter();</script>
+<script>
+  let me = null;
+
+  (async () => {
+    me = await requireSession('dev');
+    if (!me) return;
+    if (!me.isOwner) { window.location.href = '/dashboard'; return; }
+    await load();
+  })();
+
+  async function load() {
+    try {
+      const { devs } = await api('/api/devs');
+      document.getElementById('devT').textContent = devs.length;
+      document.getElementById('devA').textContent = devs.filter(d => d.addedBy === me.username).length;
+      const tbody = document.getElementById('devsBody');
+      if (!devs.length) { tbody.innerHTML = `<tr><td colspan="4" class="muted">no devs yet — strange.</td></tr>`; return; }
+      tbody.innerHTML = devs.map(d => `
+        <tr>
+          <td>
+            <span style="font-weight: 500;">${escapeHtml(d.username)}</span>
+            ${d.isOwner ? `<span class="chip" style="margin-left: 8px;">owner</span>` : ''}
+          </td>
+          <td class="muted" style="font-size: 12px;">${formatDate(d.createdAt)}</td>
+          <td class="muted" style="font-size: 12px;">${d.addedBy ? escapeHtml(d.addedBy) : '<span class="muted">—</span>'}</td>
+          <td class="actions">
+            ${d.isOwner ? '' : `<button class="btn-ghost" data-rm="${escapeHtml(d.username)}">remove</button>`}
+          </td>
+        </tr>
+      `).join('');
+      document.querySelectorAll('[data-rm]').forEach(b => b.onclick = async () => {
+        if (!confirm(`remove dev "${b.dataset.rm}"? this cannot be undone.`)) return;
+        try {
+          await api('/api/devs/' + encodeURIComponent(b.dataset.rm), { method: 'DELETE' });
+          toast('dev removed');
+          load();
+        } catch (e) { toast(e.message); }
+      });
+    } catch { toast('failed to load devs'); }
+  }
+
+  document.getElementById('addForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const out = document.getElementById('addResult');
+    out.innerHTML = '';
+    try {
+      const r = await api('/api/devs', {
+        method: 'POST',
+        body: {
+          username: document.getElementById('aUser').value.trim(),
+          password: document.getElementById('aPass').value
+        }
+      });
+      out.innerHTML = `<span class="label">added: ${escapeHtml(r.username)}</span>`;
+      document.getElementById('aUser').value = '';
+      document.getElementById('aPass').value = '';
+      toast(`dev "${r.username}" added`);
+      load();
+    } catch (e2) {
+      out.innerHTML = `<span class="label" style="color: var(--ink);">${escapeHtml(e2.message || 'failed')}</span>`;
+    }
+  });
+</script>
+</body>
+</html>

@@ -23,6 +23,9 @@ const SECRET_FILE  = path.join(DATA_DIR, '.session-secret');
 
 // configurable: max execution log entries kept on disk
 const LOG_MAX = 2000;
+// configurable: the single account that can mint other dev accounts via /owner.
+// override with env OWNER_USERNAME if you rename or want someone else to own.
+const OWNER_USERNAME = process.env.OWNER_USERNAME || 'bruvo';
 
 function loadSessionSecret() {
   if (process.env.SESSION_SECRET) return process.env.SESSION_SECRET;
@@ -196,6 +199,17 @@ function requireDev(req, res, next) {
   }
   next();
 }
+function requireOwner(req, res, next) {
+  const u = req.session.user;
+  if (!u || u.kind !== 'dev' || u.username !== OWNER_USERNAME) return res.status(403).json({ error: 'owner only' });
+  if (!userStillExists(req.session)) {
+    return req.session.destroy(() => {
+      res.clearCookie('skl.sid');
+      res.status(401).json({ error: 'account no longer exists' });
+    });
+  }
+  next();
+}
 
 app.post('/api/auth/signup', signupLimiter, (req, res) => {
   const { key, username, password } = req.body || {};
@@ -282,7 +296,55 @@ app.post('/api/auth/logout', (req, res) => {
 });
 
 app.get('/api/session', (req, res) => {
-  res.json({ user: req.session.user || null });
+  if (!req.session.user) return res.json({ user: null });
+  res.json({ user: { ...req.session.user, isOwner: req.session.user.username === OWNER_USERNAME } });
+});
+
+app.get('/api/devs', requireOwner, (req, res) => {
+  const devs = readJson(DEVS_FILE, []);
+  res.json({
+    devs: devs.map(d => ({
+      username: d.username,
+      createdAt: d.createdAt,
+      addedBy: d.addedBy || null,
+      isOwner: d.username === OWNER_USERNAME
+    }))
+  });
+});
+
+app.post('/api/devs', requireOwner, (req, res) => {
+  const { username, password } = req.body || {};
+  if (typeof username !== 'string' || typeof password !== 'string') return res.status(400).json({ error: 'username and password are required' });
+  if (!username || !password) return res.status(400).json({ error: 'username and password are required' });
+  if (username.length < 3 || username.length > 24) return res.status(400).json({ error: 'username must be 3–24 characters' });
+  if (!/^[a-zA-Z0-9_-]+$/.test(username)) return res.status(400).json({ error: 'username: letters, numbers, _ or - only' });
+  if (password.length < 8 || password.length > 128) return res.status(400).json({ error: 'password must be 8–128 characters' });
+
+  const devs  = readJson(DEVS_FILE, []);
+  const users = readJson(USERS_FILE, []);
+  if (devs.find(d => d.username === username) || users.find(u => u.username === username)) {
+    return res.status(409).json({ error: 'that username is taken' });
+  }
+  devs.push({
+    username,
+    passwordHash: bcrypt.hashSync(password, 10),
+    createdAt: new Date().toISOString(),
+    gameToken: crypto.randomBytes(18).toString('hex'),
+    addedBy: req.session.user.username
+  });
+  writeJson(DEVS_FILE, devs);
+  res.json({ ok: true, username });
+});
+
+app.delete('/api/devs/:username', requireOwner, (req, res) => {
+  const target = req.params.username;
+  if (target === OWNER_USERNAME) return res.status(400).json({ error: 'cannot remove the owner account' });
+  let devs = readJson(DEVS_FILE, []);
+  if (!devs.find(d => d.username === target)) return res.status(404).json({ error: 'not found' });
+  devs = devs.filter(d => d.username !== target);
+  writeJson(DEVS_FILE, devs);
+  userActivity.delete(target);
+  res.json({ ok: true });
 });
 
 app.get('/api/keys', requireDev, (req, res) => {
@@ -625,12 +687,22 @@ function devOnly(file) {
     res.sendFile(path.join(PUBLIC_DIR, file));
   };
 }
+function ownerOnly(file) {
+  return (req, res) => {
+    const u = req.session.user;
+    if (!u || u.kind !== 'dev' || u.username !== OWNER_USERNAME || !userStillExists(req.session)) {
+      return req.session.destroy(() => { res.clearCookie('skl.sid'); res.redirect('/login'); });
+    }
+    res.sendFile(path.join(PUBLIC_DIR, file));
+  };
+}
 app.get('/dashboard', gated('dashboard.html'));
 app.get('/games',     gated('games.html'));
 app.get('/scripts',   gated('scripts.html'));
 app.get('/dev',       devOnly('dev.html'));
 app.get('/drops',     devOnly('drops.html'));
 app.get('/logs',      devOnly('logs.html'));
+app.get('/owner',     ownerOnly('owner.html'));
 app.get('/login',     (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'login.html')));
 app.get('/signup',    (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'signup.html')));
 
