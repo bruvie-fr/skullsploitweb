@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>game · skullsploit</title>
+<link rel="icon" type="image/png" href="/img/skull.png" />
+<link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+<script src="/js/common.js"></script>
+<script>mountNav('/games');</script>
+<section class="hero" style="padding-top: clamp(60px,8vw,100px); padding-bottom: clamp(24px,4vw,48px);">
+  <div class="hero-grid">
+    <div>
+      <a href="/games" class="label" style="text-decoration: none;">← all games</a>
+      <h1 id="title" class="reveal reveal-2" style="margin-top: 14px; font-size: clamp(40px,8vw,96px); line-height: 1.05;">loading...</h1>
+      <p id="sub" class="reveal reveal-3 lead" style="max-width: 560px; margin-top: 18px;">—</p>
+      <div class="row" style="gap: 10px; margin-top: 20px; flex-wrap: wrap;">
+        <a id="pageLink" class="btn-ghost" target="_blank" rel="noopener" href="#" style="text-decoration: none; display: none;">roblox page →</a>
+        <button class="btn-ghost" id="refreshBtn">refresh</button>
+      </div>
+    </div>
+    <aside class="hero-meta reveal reveal-4">
+      <div><span class="k">servers live</span><span class="v" id="srvCount">—</span></div>
+      <div><span class="k">total players</span><span class="v" id="pCount">—</span></div>
+      <div><span class="k">bucket</span><span class="v" id="bk">—</span></div>
+    </aside>
+  </div>
+  <div id="thumbWrap" style="margin-top: 32px;"></div>
+</section>
+<section class="container-wide" style="padding-top: 0;">
+  <div class="row-between" style="margin-bottom: 18px; gap: 14px;">
+    <span class="label">joinable servers</span>
+    <input id="search" placeholder="filter servers..." style="max-width: 280px;" />
+  </div>
+  <div id="serverList"></div>
+</section>
+<script>mountFooter();</script>
+<script>
+  const placeId = location.pathname.replace(/^\/game\//, '').replace(/[^0-9]/g, '');
+  let game = null;
+
+  (async () => {
+    const me = await requireSession();
+    if (!me) return;
+    if (!placeId) { window.location.href = '/games'; return; }
+    await load();
+    setInterval(load, 15000);
+    document.getElementById('refreshBtn').addEventListener('click', () => { load(); toast('refreshed'); });
+    document.getElementById('search').addEventListener('input', renderServers);
+  })();
+
+  async function load() {
+    try {
+      const r = await api('/api/games/' + encodeURIComponent(placeId));
+      game = r.game;
+      render();
+    } catch { toast('failed to load game'); }
+  }
+
+  function render() {
+    if (!game) {
+      document.getElementById('title').textContent = 'no live servers';
+      document.getElementById('sub').textContent = 'this game has no active servers running our backdoor right now. check back in a bit.';
+      document.getElementById('srvCount').textContent = '0';
+      document.getElementById('pCount').textContent = '0';
+      document.getElementById('bk').textContent = '—';
+      document.getElementById('serverList').innerHTML = `<div class="panel"><p class="muted">no joinable servers right now.</p></div>`;
+      return;
+    }
+    document.getElementById('title').textContent = game.name;
+    document.getElementById('sub').textContent = `${game.totalPlayers.toLocaleString()} player${game.totalPlayers === 1 ? '' : 's'} across ${game.serverCount} server${game.serverCount === 1 ? '' : 's'} · placeId ${game.placeId}`;
+    document.getElementById('srvCount').textContent = game.serverCount;
+    document.getElementById('pCount').textContent = game.totalPlayers.toLocaleString();
+    document.getElementById('bk').textContent = game.bucket || '—';
+
+    const link = document.getElementById('pageLink');
+    if (game.pageUrl) { link.href = game.pageUrl; link.style.display = ''; }
+
+    const tw = document.getElementById('thumbWrap');
+    tw.innerHTML = game.thumbnail ? `<img src="${escapeHtml(game.thumbnail)}" alt="" referrerpolicy="no-referrer" onerror="this.style.display='none'" style="max-width: 320px; width: 100%; aspect-ratio: 1/1; object-fit: cover; border: 1px solid var(--line); display: block;" />` : '';
+
+    renderServers();
+  }
+
+  function renderServers() {
+    if (!game) return;
+    const q = document.getElementById('search').value.trim().toLowerCase();
+    const list = game.servers.filter(s => !q || s.id.toLowerCase().includes(q));
+    const c = document.getElementById('serverList');
+    if (!list.length) {
+      c.innerHTML = `<div class="panel"><p class="muted">${game.servers.length ? 'no servers match.' : 'no joinable servers right now.'}</p></div>`;
+      return;
+    }
+    c.innerHTML = `
+      <div class="panel" style="padding: 0; overflow: hidden;">
+        ${list.map((s, i) => {
+          const fill = s.maxPlayers ? Math.round((s.players / s.maxPlayers) * 100) : 0;
+          const ago = Math.max(0, Math.floor((Date.now() - (s.lastSeen || 0)) / 1000));
+          return `
+            <div class="row-between" style="padding: 14px 22px; gap: 14px; ${i ? 'border-top: 1px solid var(--line);' : ''} font-size: 13px; align-items: center;">
+              <div class="row" style="gap: 16px; align-items: center; min-width: 0; flex: 1;">
+                <span class="kbd" style="font-size: 11px;">${escapeHtml(s.id.slice(0, 12))}…</span>
+                <div style="min-width: 140px;">
+                  <div style="font-family: var(--f-mono);">${s.players.toLocaleString()}${s.maxPlayers ? ' / ' + s.maxPlayers.toLocaleString() : ''} players</div>
+                  ${s.maxPlayers ? `<div style="height: 4px; background: var(--line); margin-top: 6px; overflow: hidden;"><div style="width: ${fill}%; height: 100%; background: var(--ink-dim);"></div></div>` : ''}
+                </div>
+                <span class="muted" style="font-size: 11px;">seen ${ago}s ago</span>
+              </div>
+              <a class="btn-solid" href="${escapeHtml(s.joinUrl)}" target="_blank" rel="noopener" style="text-decoration: none;">join →</a>
+            </div>`;
+        }).join('')}
+      </div>`;
+  }
+</script>
+</body>
+</html>

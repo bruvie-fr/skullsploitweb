@@ -4,6 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>developer · skullsploit</title>
+<link rel="icon" type="image/png" href="/img/skull.png" />
 <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
@@ -14,60 +15,16 @@
     <div>
       <span class="label reveal reveal-1">developer hub</span>
       <h1 class="reveal reveal-2" style="margin-top: 14px; font-size: clamp(56px,12vw,140px);">workshop<span class="cursor"></span></h1>
-      <p class="reveal reveal-3 lead" style="max-width: 520px; margin-top: 24px;">mint invite keys, publish scripts, and bulk import. your drops and execution logs each have their own page now.</p>
+      <p class="reveal reveal-3 lead" style="max-width: 520px; margin-top: 24px;">publish scripts, edit your drops, and view executions. invite keys are owner-only — ask one of the owners to mint one for a new member.</p>
     </div>
     <aside class="hero-meta reveal reveal-4">
-      <div><span class="k">keys total</span><span class="v" id="kT">—</span></div>
-      <div><span class="k">keys active</span><span class="v" id="kA">—</span></div>
       <div><a href="/drops" class="k" style="text-decoration: none;">your drops →</a><span class="v" id="myCount">—</span></div>
       <div><a href="/logs" class="k" style="text-decoration: none;">logs →</a><span class="v" id="logCount">—</span></div>
+      <div><span class="k">total likes</span><span class="v" id="myLikes">—</span></div>
     </aside>
   </div>
 </section>
 <section class="container-wide" style="padding-top: 0;">
-  <div class="grid grid-2" style="margin-bottom: 60px;">
-    <div class="panel-flush" style="border-right: 1px solid var(--line);">
-      <span class="label">mint invite keys</span>
-      <h2 style="margin-top: 8px;">create keys</h2>
-      <p class="muted" style="margin-top: 10px;">each key creates one new member account. set how long it stays valid.</p>
-      <form id="mintForm" style="margin-top: 28px;">
-        <div class="form-row">
-          <div class="field">
-            <span class="label">how many</span>
-            <input id="mCount" type="number" min="1" max="100" value="1" />
-          </div>
-          <div class="field">
-            <span class="label">expires in</span>
-            <select id="mTtl">
-              <option value="0">never (infinite)</option>
-              <option value="1">1 hour</option>
-              <option value="24" selected>1 day</option>
-              <option value="168">7 days</option>
-              <option value="720">30 days</option>
-            </select>
-          </div>
-        </div>
-        <div class="field">
-          <span class="label">note (optional)</span>
-          <input id="mNote" placeholder="who's this for?" />
-        </div>
-        <button class="btn-solid" type="submit">mint →</button>
-      </form>
-      <div id="mintedBox" style="margin-top: 24px;"></div>
-    </div>
-    <div class="panel-flush">
-      <span class="label">your invite keys</span>
-      <h2 style="margin-top: 8px;">registry</h2>
-      <p class="muted" style="margin-top: 10px;">all the keys you've issued. revoke or remove at any time.</p>
-      <div class="table-wrap" style="margin-top: 28px; max-height: 480px; overflow: auto; border: 1px solid var(--line);">
-        <table>
-          <thead><tr><th>key</th><th>expires</th><th>status</th><th></th></tr></thead>
-          <tbody id="keysBody"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
   <div class="grid grid-2">
     <div class="panel-flush" style="border-right: 1px solid var(--line);">
       <span class="label">publish a script</span>
@@ -136,81 +93,21 @@
   (async () => {
     me = await requireSession('dev');
     if (!me) return;
-    await Promise.all([loadKeys(), loadCounts()]);
+    await loadCounts();
   })();
 
   async function loadCounts() {
     try {
       const { scripts } = await api('/api/scripts');
-      document.getElementById('myCount').textContent = scripts.filter(s => s.author === me.username).length;
+      const mine = scripts.filter(s => s.author === me.username);
+      document.getElementById('myCount').textContent = mine.length;
+      document.getElementById('myLikes').textContent = mine.reduce((s, x) => s + (Number(x.likeCount) || 0), 0);
     } catch {}
     try {
       const { logs } = await api('/api/logs');
       document.getElementById('logCount').textContent = logs.length;
     } catch {}
   }
-
-  async function loadKeys() {
-    const { keys } = await api('/api/keys');
-    document.getElementById('kT').textContent = keys.length;
-    const active = keys.filter(k => !k.revoked && !k.consumed && (!k.expiresAt || new Date(k.expiresAt) > new Date()));
-    document.getElementById('kA').textContent = active.length;
-
-    document.getElementById('keysBody').innerHTML = keys.length ? keys.slice().reverse().map(k => {
-      const expired = k.expiresAt && new Date(k.expiresAt) < new Date();
-      const status = k.revoked ? 'revoked' : k.consumed ? 'used' : expired ? 'expired' : 'active';
-      const cls = (k.revoked || expired || k.consumed) ? 'dead' : 'live';
-      return `
-        <tr>
-          <td class="code"><span style="cursor:pointer" data-copy="${escapeHtml(k.key)}" title="copy">${escapeHtml(k.key)}</span></td>
-          <td>${k.expiresAt ? timeUntil(k.expiresAt) : 'never'}</td>
-          <td><span class="chip ${cls}">${status}</span></td>
-          <td class="actions">
-            ${!k.revoked && !k.consumed ? `<button data-rev="${escapeHtml(k.key)}" class="btn-ghost">revoke</button>` : ''}
-            <button data-del="${escapeHtml(k.key)}" class="btn-ghost">remove</button>
-          </td>
-        </tr>`;
-    }).join('') : `<tr><td colspan="4" class="muted">no keys yet — mint your first one ↖</td></tr>`;
-
-    document.querySelectorAll('[data-rev]').forEach(b => b.onclick = async () => {
-      await api(`/api/keys/${encodeURIComponent(b.dataset.rev)}/revoke`, { method: 'POST' });
-      toast('key revoked'); loadKeys();
-    });
-    document.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
-      if (!confirm('remove this key permanently?')) return;
-      await api(`/api/keys/${encodeURIComponent(b.dataset.del)}`, { method: 'DELETE' });
-      toast('key removed'); loadKeys();
-    });
-    document.querySelectorAll('[data-copy]').forEach(s => s.onclick = () => {
-      navigator.clipboard.writeText(s.dataset.copy); toast('copied');
-    });
-  }
-
-  document.getElementById('mintForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    try {
-      const r = await api('/api/keys', {
-        method: 'POST',
-        body: {
-          count: parseInt(document.getElementById('mCount').value, 10),
-          durationHours: parseInt(document.getElementById('mTtl').value, 10),
-          note: document.getElementById('mNote').value
-        }
-      });
-      const ttlLabel = document.getElementById('mTtl').selectedOptions[0].textContent;
-      document.getElementById('mintedBox').innerHTML = `
-        <span class="label">${r.minted.length} key${r.minted.length>1?'s':''} minted · expires ${ttlLabel}</span>
-        <pre class="code-block" style="margin-top: 10px;">${r.minted.map(k => k.key).join('\n')}</pre>
-        <button class="btn-ghost" id="copyAll" style="margin-top: 10px;">copy all</button>
-      `;
-      document.getElementById('copyAll').onclick = () => {
-        navigator.clipboard.writeText(r.minted.map(k => k.key).join('\n'));
-        toast('copied all keys');
-      };
-      toast(`${r.minted.length} key${r.minted.length>1?'s':''} minted`);
-      loadKeys();
-    } catch (e2) { toast(e2.message); }
-  });
 
   document.getElementById('pub').addEventListener('submit', async (e) => {
     e.preventDefault();

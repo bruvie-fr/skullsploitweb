@@ -4,6 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>home · skullsploit</title>
+<link rel="icon" type="image/png" href="/img/skull.png" />
 <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
@@ -23,21 +24,26 @@
     </aside>
   </div>
 </section>
-<div class="stats" style="grid-template-columns: repeat(3, 1fr);">
+<div class="stats" style="grid-template-columns: repeat(4, 1fr);">
   <div class="stat">
     <div class="stat-label">scripts</div>
     <div class="stat-value" id="stScripts">—</div>
     <div class="stat-sub">ready to use</div>
   </div>
   <div class="stat">
-    <div class="stat-label">games</div>
+    <div class="stat-label">games live</div>
     <div class="stat-value" id="stGames">—</div>
-    <div class="stat-sub">currently supported</div>
+    <div class="stat-sub" id="stGamesSub">running our backdoor right now</div>
   </div>
   <div class="stat">
-    <div class="stat-label">developers</div>
-    <div class="stat-value">few</div>
-    <div class="stat-sub">but they're great</div>
+    <div class="stat-label">players</div>
+    <div class="stat-value" id="stPlayers">—</div>
+    <div class="stat-sub">across all live servers</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">servers</div>
+    <div class="stat-value" id="stServers">—</div>
+    <div class="stat-sub">joinable right now</div>
   </div>
 </div>
 <section class="container-wide">
@@ -65,6 +71,11 @@
     const d = new Date();
     document.getElementById('today').textContent = d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
 
+    await Promise.all([loadScripts(), loadGames()]);
+    setInterval(loadGames, 20000);
+  })();
+
+  async function loadScripts() {
     try {
       const { scripts } = await api('/api/scripts');
       document.getElementById('stScripts').textContent = scripts.length;
@@ -84,26 +95,41 @@
           </div>
         </a>
       `).join('') : `<div class="panel" style="grid-column: 1 / -1;"><p class="muted">no scripts yet — check back soon.</p></div>`;
-    } catch {}
+    } catch {
+      document.getElementById('stScripts').textContent = '0';
+    }
+  }
 
+  async function loadGames() {
     try {
       const { games } = await api('/api/games');
-      document.getElementById('stGames').textContent = games.filter(g => g.supported).length;
+      const totalPlayers = games.reduce((s, g) => s + (g.totalPlayers || 0), 0);
+      const totalServers = games.reduce((s, g) => s + (g.serverCount || 0), 0);
+      document.getElementById('stGames').textContent = games.length;
+      document.getElementById('stPlayers').textContent = totalPlayers.toLocaleString();
+      document.getElementById('stServers').textContent = totalServers;
+      document.getElementById('stGamesSub').textContent = games.length === 0
+        ? 'no games live right now'
+        : `${games.length === 1 ? 'game' : 'games'} running our backdoor right now`;
       const top = games.slice(0, 4);
-      document.getElementById('gameGrid').innerHTML = top.map((g, i) => `
-        <a href="/games" class="game-card" style="text-decoration: none;">
+      document.getElementById('gameGrid').innerHTML = top.length ? top.map((g, i) => `
+        <a href="/game/${encodeURIComponent(g.placeId)}" class="game-card" style="text-decoration: none;">
           <div>
             <div class="game-card-num">${String(i+1).padStart(2,'0')} / ${String(games.length).padStart(2,'0')}</div>
             <div class="game-card-name" style="margin-top: 12px;">${escapeHtml(g.name)}</div>
           </div>
           <div class="game-card-meta">
-            <span>${g.players.toLocaleString()} online</span>
-            <span class="chip ${g.supported ? 'live' : 'dead'}">${g.supported ? 'live' : 'soon'}</span>
+            <span>${g.totalPlayers.toLocaleString()} online · ${g.serverCount} server${g.serverCount === 1 ? '' : 's'}</span>
+            <span class="chip live">live</span>
           </div>
         </a>
-      `).join('');
-    } catch {}
-  })();
+      `).join('') : `<div class="panel" style="grid-column: 1 / -1;"><p class="muted">no games live right now — check back in a bit.</p></div>`;
+    } catch {
+      document.getElementById('stGames').textContent = '0';
+      document.getElementById('stPlayers').textContent = '0';
+      document.getElementById('stServers').textContent = '0';
+    }
+  }
 </script>
 </body>
 </html>

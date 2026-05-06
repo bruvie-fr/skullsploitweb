@@ -1,13 +1,7 @@
 (() => {
-  window.SKULL_SVG = `
-    <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <path d="M32 4C18.7 4 8 14.7 8 28c0 7.4 3.3 14 8.5 18.4V54c0 1.7 1.3 3 3 3h25c1.7 0 3-1.3 3-3v-7.6C52.7 42 56 35.4 56 28 56 14.7 45.3 4 32 4zm-9 22a4 4 0 1 1 0 8 4 4 0 0 1 0-8zm18 0a4 4 0 1 1 0 8 4 4 0 0 1 0-8zM26 42c0-1.1.9-2 2-2h8c1.1 0 2 .9 2 2v6h-3v-3h-2v3h-2v-3h-2v3h-3v-6z"/>
-    </svg>`;
-
-  window.SKULL_LARGE = `
-    <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <path d="M100 12C58.6 12 25 45.6 25 87c0 22.5 9.9 42.6 25.5 56.4V178c0 5.5 4.5 10 10 10h79c5.5 0 10-4.5 10-10v-34.6c15.6-13.8 25.5-33.9 25.5-56.4 0-41.4-33.6-75-75-75zM72 80a14 14 0 1 1 0 28 14 14 0 0 1 0-28zm56 0a14 14 0 1 1 0 28 14 14 0 0 1 0-28zM83 134c0-3.9 3.1-7 7-7h20c3.9 0 7 3.1 7 7v22h-9v-12h-5v12h-6v-12h-5v12h-9v-22z"/>
-    </svg>`;
+  window.SKULL_IMG_SRC = '/img/skull.png';
+  window.SKULL_SVG = `<img src="/img/skull.png" alt="" aria-hidden="true" style="width:100%;height:100%;object-fit:contain;display:block;" />`;
+  window.SKULL_LARGE = `<img src="/img/skull.png" alt="" aria-hidden="true" style="width:100%;height:100%;object-fit:contain;display:block;" />`;
 
   window.HEART_SVG = `
     <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -67,7 +61,10 @@
       links.push({ href: '/dev',    label: 'Developer' });
       links.push({ href: '/drops',  label: 'Drops' });
       links.push({ href: '/logs',   label: 'Logs' });
-      if (me.isOwner) links.push({ href: '/owner', label: 'Owner' });
+      if (me.isOwner) {
+        links.push({ href: '/owner', label: 'Owner' });
+        links.push({ href: '/audit', label: 'Audit' });
+      }
     }
 
     const linkHtml = links.map(l => `<li><a href="${l.href}" class="${l.href === active ? 'active' : ''}">${l.label}</a></li>`).join('');

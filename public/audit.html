@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>audit log · skullsploit</title>
+<link rel="icon" type="image/png" href="/img/skull.png" />
+<link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+<script src="/js/common.js"></script>
+<script>mountNav('/audit');</script>
+<section class="hero" style="padding-top: clamp(60px,8vw,100px); padding-bottom: clamp(40px,5vw,60px);">
+  <div class="hero-grid">
+    <div>
+      <span class="label reveal reveal-1">audit log</span>
+      <h1 class="reveal reveal-2" style="margin-top: 14px; font-size: clamp(56px,12vw,140px);">history<span class="cursor"></span></h1>
+      <p class="reveal reveal-3 lead" style="max-width: 540px; margin-top: 24px;">every account, key, script, and dev change is logged here. owner-only.</p>
+    </div>
+    <aside class="hero-meta reveal reveal-4">
+      <div><span class="k">total</span><span class="v" id="aTot">—</span></div>
+      <div><span class="k">last hour</span><span class="v" id="aHr">—</span></div>
+      <div><span class="k">last 24h</span><span class="v" id="aDay">—</span></div>
+    </aside>
+  </div>
+</section>
+<section class="container-wide" style="padding-top: 0;">
+  <div class="row-between" style="margin-bottom: 20px; gap: 14px; flex-wrap: wrap;">
+    <input id="search" placeholder="filter by actor, target, or event..." style="max-width: 420px;" />
+    <div class="row" style="gap: 6px; flex-wrap: wrap;">
+      <button class="btn-ghost active" data-cat="all">all</button>
+      <button class="btn-ghost" data-cat="auth">auth</button>
+      <button class="btn-ghost" data-cat="key">keys</button>
+      <button class="btn-ghost" data-cat="script">scripts</button>
+      <button class="btn-ghost" data-cat="dev">devs</button>
+      <button class="btn-ghost" id="refreshBtn">refresh</button>
+    </div>
+  </div>
+  <div class="table-wrap" style="border: 1px solid var(--line);">
+    <table>
+      <thead><tr><th>when</th><th>actor</th><th>event</th><th>target</th><th>details</th><th>ip</th></tr></thead>
+      <tbody id="auditBody"><tr><td colspan="6" class="muted">loading...</td></tr></tbody>
+    </table>
+  </div>
+</section>
+<script>mountFooter();</script>
+<script>
+  let allLogs = [];
+  let activeCat = 'all';
+
+  (async () => {
+    const me = await requireSession('dev');
+    if (!me) return;
+    if (!me.isOwner) { window.location.href = '/dashboard'; return; }
+    await load();
+    setInterval(load, 30000);
+  })();
+
+  async function load() {
+    try {
+      const { logs } = await api('/api/audit?limit=2000');
+      allLogs = logs;
+      const now = Date.now();
+      document.getElementById('aTot').textContent = logs.length;
+      document.getElementById('aHr').textContent = logs.filter(l => now - new Date(l.at).getTime() < 3600 * 1000).length;
+      document.getElementById('aDay').textContent = logs.filter(l => now - new Date(l.at).getTime() < 86400 * 1000).length;
+      render();
+    } catch { toast('failed to load audit log'); }
+  }
+
+  function render() {
+    const q = document.getElementById('search').value.trim().toLowerCase();
+    const list = allLogs.filter(l => {
+      if (activeCat !== 'all' && !String(l.event).startsWith(activeCat + '.')) return false;
+      if (!q) return true;
+      const hay = `${l.actor || ''} ${l.event} ${l.target || ''} ${JSON.stringify(l.details || {})}`.toLowerCase();
+      return hay.includes(q);
+    });
+    const tbody = document.getElementById('auditBody');
+    if (!list.length) {
+      tbody.innerHTML = `<tr><td colspan="6" class="muted">${allLogs.length ? 'no entries match.' : 'no audit entries yet.'}</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = list.map(l => {
+      const when = new Date(l.at);
+      const detPairs = Object.entries(l.details || {}).filter(([k]) => k);
+      const det = detPairs.length
+        ? detPairs.map(([k, v]) => `<span class="kbd" style="font-size: 11px; margin-right: 6px;">${escapeHtml(k)}=${escapeHtml(typeof v === 'object' ? JSON.stringify(v) : String(v))}</span>`).join('')
+        : '<span class="muted">—</span>';
+      return `
+        <tr>
+          <td title="${escapeHtml(when.toISOString())}">${formatAgo(when)}</td>
+          <td>
+            <div style="font-weight: 500;">${escapeHtml(l.actor || 'anon')}</div>
+            <div class="muted" style="font-size: 11px; margin-top: 2px;">${escapeHtml(l.kind || '')}</div>
+          </td>
+          <td><span class="chip ${eventChipClass(l.event)}">${escapeHtml(l.event)}</span></td>
+          <td>${l.target ? escapeHtml(l.target) : '<span class="muted">—</span>'}</td>
+          <td style="max-width: 360px;">${det}</td>
+          <td class="muted" style="font-size: 11px; font-family: var(--f-mono);">${escapeHtml(l.ip || '—')}</td>
+        </tr>`;
+    }).join('');
+  }
+
+  function eventChipClass(ev) {
+    if (!ev) return '';
+    if (ev.endsWith('_failed') || ev.endsWith('.deleted') || ev.endsWith('.revoked') || ev.endsWith('.demoted')) return 'dead';
+    if (ev.endsWith('.created') || ev.endsWith('.promoted') || ev.endsWith('.login') || ev.endsWith('.signup')) return 'live';
+    return '';
+  }
+
+  function formatAgo(d) {
+    const s = Math.floor((Date.now() - d.getTime()) / 1000);
+    if (s < 60) return s + 's ago';
+    if (s < 3600) return Math.floor(s / 60) + 'm ago';
+    if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+    return Math.floor(s / 86400) + 'd ago';
+  }
+
+  document.getElementById('search').addEventListener('input', render);
+  document.getElementById('refreshBtn').addEventListener('click', () => { load(); toast('refreshed'); });
+  document.querySelectorAll('[data-cat]').forEach(b => {
+    b.addEventListener('click', () => {
+      activeCat = b.dataset.cat;
+      document.querySelectorAll('[data-cat]').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      render();
+    });
+  });
+</script>
+<style>
+  button.active { color: var(--ink); border: 1px solid var(--line-2); }
+</style>
+</body>
+</html>

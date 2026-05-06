@@ -4,6 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>owner · skullsploit</title>
+<link rel="icon" type="image/png" href="/img/skull.png" />
 <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
@@ -14,20 +15,66 @@
     <div>
       <span class="label reveal reveal-1">owner</span>
       <h1 class="reveal reveal-2" style="margin-top: 14px; font-size: clamp(56px,12vw,140px);">control<span class="cursor"></span></h1>
-      <p class="reveal reveal-3 lead" style="max-width: 540px; margin-top: 24px;">add and remove developers. only you see this page.</p>
+      <p class="reveal reveal-3 lead" style="max-width: 560px; margin-top: 24px;">mint invite keys, manage developers, and promote trusted devs to fellow owners.</p>
     </div>
     <aside class="hero-meta reveal reveal-4">
       <div><span class="k">total devs</span><span class="v" id="devT">—</span></div>
-      <div><span class="k">added by you</span><span class="v" id="devA">—</span></div>
+      <div><span class="k">owners</span><span class="v" id="ownT">—</span></div>
+      <div><span class="k">keys active</span><span class="v" id="kA">—</span></div>
+      <div><a href="/audit" class="k" style="text-decoration: none;">audit log →</a><span class="v" id="aud">—</span></div>
     </aside>
   </div>
 </section>
+
 <section class="container-wide" style="padding-top: 0;">
+  <div class="grid grid-2" style="margin-bottom: 60px;">
+    <div class="panel-flush" style="border-right: 1px solid var(--line);">
+      <span class="label">mint invite key</span>
+      <h2 style="margin-top: 8px;">create a key</h2>
+      <p class="muted" style="margin-top: 10px;">each key reserves a username and creates one new member account when redeemed. only owners can mint.</p>
+      <form id="mintForm" style="margin-top: 28px;">
+        <div class="field">
+          <span class="label">username (required)</span>
+          <input id="mUser" required minlength="3" maxlength="24" pattern="[a-zA-Z0-9_-]+" placeholder="who's this for?" />
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <span class="label">expires in</span>
+            <select id="mTtl">
+              <option value="0">never (infinite)</option>
+              <option value="1">1 hour</option>
+              <option value="24">1 day</option>
+              <option value="168" selected>7 days</option>
+              <option value="720">30 days</option>
+            </select>
+          </div>
+          <div class="field">
+            <span class="label">note (optional)</span>
+            <input id="mNote" placeholder="context for later" />
+          </div>
+        </div>
+        <button class="btn-solid" type="submit">mint →</button>
+      </form>
+      <div id="mintedBox" style="margin-top: 24px;"></div>
+    </div>
+    <div class="panel-flush">
+      <span class="label">key registry</span>
+      <h2 style="margin-top: 8px;">all keys</h2>
+      <p class="muted" style="margin-top: 10px;">revoking a consumed key also removes the user account it created.</p>
+      <div class="table-wrap" style="margin-top: 28px; max-height: 480px; overflow: auto; border: 1px solid var(--line);">
+        <table>
+          <thead><tr><th>username</th><th>key</th><th>expires</th><th>status</th><th></th></tr></thead>
+          <tbody id="keysBody"><tr><td colspan="5" class="muted">loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <div class="grid grid-2" style="margin-bottom: 60px;">
     <div class="panel-flush" style="border-right: 1px solid var(--line);">
       <span class="label">create dev account</span>
       <h2 style="margin-top: 8px;">add a developer</h2>
-      <p class="muted" style="margin-top: 10px;">they'll be able to mint keys, publish scripts, and view execution logs. they can't manage devs.</p>
+      <p class="muted" style="margin-top: 10px;">developers can publish scripts and view execution logs. tick "owner" to give them full control.</p>
       <form id="addForm" style="margin-top: 28px;">
         <div class="field">
           <span class="label">username</span>
@@ -37,18 +84,22 @@
           <span class="label">password</span>
           <input id="aPass" type="password" required minlength="8" maxlength="128" placeholder="8 characters minimum" />
         </div>
-        <button class="btn-solid" type="submit">add →</button>
+        <label class="row" style="gap: 8px; margin-top: 12px; align-items: center; cursor: pointer;">
+          <input id="aOwner" type="checkbox" />
+          <span>also make them an owner</span>
+        </label>
+        <button class="btn-solid" type="submit" style="margin-top: 18px;">add →</button>
       </form>
       <div id="addResult" style="margin-top: 18px;"></div>
     </div>
     <div class="panel-flush">
       <span class="label">developer registry</span>
       <h2 style="margin-top: 8px;">all devs</h2>
-      <p class="muted" style="margin-top: 10px;">your account is protected — you can't remove yourself here. for that, edit data/devs.json directly.</p>
+      <p class="muted" style="margin-top: 10px;">promote, demote, or remove devs. the bootstrap owner is always protected. you can't remove yourself here.</p>
       <div class="table-wrap" style="margin-top: 28px; max-height: 520px; overflow: auto; border: 1px solid var(--line);">
         <table>
-          <thead><tr><th>username</th><th>added</th><th>added by</th><th></th></tr></thead>
-          <tbody id="devsBody"><tr><td colspan="4" class="muted">loading...</td></tr></tbody>
+          <thead><tr><th>username</th><th>role</th><th>added</th><th>added by</th><th></th></tr></thead>
+          <tbody id="devsBody"><tr><td colspan="5" class="muted">loading...</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -62,39 +113,127 @@
     me = await requireSession('dev');
     if (!me) return;
     if (!me.isOwner) { window.location.href = '/dashboard'; return; }
-    await load();
+    await Promise.all([loadKeys(), loadDevs(), loadAudit()]);
   })();
 
-  async function load() {
+  async function loadAudit() {
+    try {
+      const { logs } = await api('/api/audit?limit=1');
+      // not exposed as a count; we use a small indicator instead
+      document.getElementById('aud').textContent = logs.length ? 'open →' : 'empty';
+    } catch { document.getElementById('aud').textContent = '—'; }
+  }
+
+  async function loadKeys() {
+    try {
+      const { keys } = await api('/api/keys');
+      const active = keys.filter(k => !k.revoked && !k.consumed && (!k.expiresAt || new Date(k.expiresAt) > new Date()));
+      document.getElementById('kA').textContent = active.length;
+      const tbody = document.getElementById('keysBody');
+      if (!keys.length) { tbody.innerHTML = `<tr><td colspan="5" class="muted">no keys yet — mint your first one ↖</td></tr>`; return; }
+      tbody.innerHTML = keys.slice().reverse().map(k => {
+        const expired = k.expiresAt && new Date(k.expiresAt) < new Date();
+        const status = k.revoked ? 'revoked' : k.consumed ? 'used' : expired ? 'expired' : 'active';
+        const cls = (k.revoked || expired || k.consumed) ? 'dead' : 'live';
+        return `
+          <tr>
+            <td><span style="font-weight: 500;">${escapeHtml(k.boundUsername || '—')}</span>${k.consumedBy && k.consumedBy !== k.boundUsername ? `<div class="muted" style="font-size:11px;">used by ${escapeHtml(k.consumedBy)}</div>` : ''}</td>
+            <td class="code"><span style="cursor:pointer" data-copy="${escapeHtml(k.key)}" title="copy">${escapeHtml(k.key)}</span></td>
+            <td>${k.expiresAt ? timeUntil(k.expiresAt) : 'never'}</td>
+            <td><span class="chip ${cls}">${status}</span></td>
+            <td class="actions">
+              ${!k.revoked && !k.consumed ? `<button data-rev="${escapeHtml(k.key)}" class="btn-ghost">revoke</button>` : ''}
+              <button data-del="${escapeHtml(k.key)}" class="btn-ghost">remove</button>
+            </td>
+          </tr>`;
+      }).join('');
+
+      document.querySelectorAll('[data-rev]').forEach(b => b.onclick = async () => {
+        if (!confirm('revoke this key? the user account it created (if any) will also be removed.')) return;
+        try { await api(`/api/keys/${encodeURIComponent(b.dataset.rev)}/revoke`, { method: 'POST' }); toast('key revoked'); loadKeys(); }
+        catch (e) { toast(e.message); }
+      });
+      document.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+        if (!confirm('remove this key permanently? the user account it created (if any) will also be removed.')) return;
+        try { await api(`/api/keys/${encodeURIComponent(b.dataset.del)}`, { method: 'DELETE' }); toast('key removed'); loadKeys(); }
+        catch (e) { toast(e.message); }
+      });
+      document.querySelectorAll('[data-copy]').forEach(s => s.onclick = () => {
+        navigator.clipboard.writeText(s.dataset.copy); toast('copied');
+      });
+    } catch { toast('failed to load keys'); }
+  }
+
+  async function loadDevs() {
     try {
       const { devs } = await api('/api/devs');
       document.getElementById('devT').textContent = devs.length;
-      document.getElementById('devA').textContent = devs.filter(d => d.addedBy === me.username).length;
+      document.getElementById('ownT').textContent = devs.filter(d => d.isOwner).length;
       const tbody = document.getElementById('devsBody');
-      if (!devs.length) { tbody.innerHTML = `<tr><td colspan="4" class="muted">no devs yet — strange.</td></tr>`; return; }
-      tbody.innerHTML = devs.map(d => `
-        <tr>
-          <td>
-            <span style="font-weight: 500;">${escapeHtml(d.username)}</span>
-            ${d.isOwner ? `<span class="chip" style="margin-left: 8px;">owner</span>` : ''}
-          </td>
-          <td class="muted" style="font-size: 12px;">${formatDate(d.createdAt)}</td>
-          <td class="muted" style="font-size: 12px;">${d.addedBy ? escapeHtml(d.addedBy) : '<span class="muted">—</span>'}</td>
-          <td class="actions">
-            ${d.isOwner ? '' : `<button class="btn-ghost" data-rm="${escapeHtml(d.username)}">remove</button>`}
-          </td>
-        </tr>
-      `).join('');
+      if (!devs.length) { tbody.innerHTML = `<tr><td colspan="5" class="muted">no devs yet — strange.</td></tr>`; return; }
+      tbody.innerHTML = devs.map(d => {
+        const isMe = d.username === me.username;
+        return `
+          <tr>
+            <td>
+              <span style="font-weight: 500;">${escapeHtml(d.username)}</span>
+              ${d.isBootstrap ? `<span class="chip" style="margin-left: 8px;">root</span>` : ''}
+              ${isMe ? `<span class="chip" style="margin-left: 8px;">you</span>` : ''}
+            </td>
+            <td>${d.isOwner ? `<span class="chip live">owner</span>` : `<span class="chip">developer</span>`}</td>
+            <td class="muted" style="font-size: 12px;">${formatDate(d.createdAt)}</td>
+            <td class="muted" style="font-size: 12px;">${d.addedBy ? escapeHtml(d.addedBy) : '<span class="muted">—</span>'}</td>
+            <td class="actions">
+              ${!d.isOwner ? `<button class="btn-ghost" data-prom="${escapeHtml(d.username)}">promote</button>` : ''}
+              ${d.isOwner && !d.isBootstrap && !isMe ? `<button class="btn-ghost" data-dem="${escapeHtml(d.username)}">demote</button>` : ''}
+              ${!d.isBootstrap && !isMe && !d.isOwner ? `<button class="btn-ghost" data-rm="${escapeHtml(d.username)}">remove</button>` : ''}
+            </td>
+          </tr>`;
+      }).join('');
+
+      document.querySelectorAll('[data-prom]').forEach(b => b.onclick = async () => {
+        if (!confirm(`promote "${b.dataset.prom}" to owner? they'll have full control.`)) return;
+        try { await api(`/api/devs/${encodeURIComponent(b.dataset.prom)}/promote`, { method: 'POST' }); toast('promoted'); loadDevs(); }
+        catch (e) { toast(e.message); }
+      });
+      document.querySelectorAll('[data-dem]').forEach(b => b.onclick = async () => {
+        if (!confirm(`demote "${b.dataset.dem}" back to developer?`)) return;
+        try { await api(`/api/devs/${encodeURIComponent(b.dataset.dem)}/demote`, { method: 'POST' }); toast('demoted'); loadDevs(); }
+        catch (e) { toast(e.message); }
+      });
       document.querySelectorAll('[data-rm]').forEach(b => b.onclick = async () => {
         if (!confirm(`remove dev "${b.dataset.rm}"? this cannot be undone.`)) return;
-        try {
-          await api('/api/devs/' + encodeURIComponent(b.dataset.rm), { method: 'DELETE' });
-          toast('dev removed');
-          load();
-        } catch (e) { toast(e.message); }
+        try { await api('/api/devs/' + encodeURIComponent(b.dataset.rm), { method: 'DELETE' }); toast('dev removed'); loadDevs(); }
+        catch (e) { toast(e.message); }
       });
     } catch { toast('failed to load devs'); }
   }
+
+  document.getElementById('mintForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      const r = await api('/api/keys', {
+        method: 'POST',
+        body: {
+          username: document.getElementById('mUser').value.trim(),
+          durationHours: parseInt(document.getElementById('mTtl').value, 10),
+          note: document.getElementById('mNote').value
+        }
+      });
+      const ttlLabel = document.getElementById('mTtl').selectedOptions[0].textContent;
+      const k = r.minted[0];
+      document.getElementById('mintedBox').innerHTML = `
+        <span class="label">key minted for ${escapeHtml(k.boundUsername)} · expires ${ttlLabel}</span>
+        <pre class="code-block" style="margin-top: 10px;">${escapeHtml(k.key)}</pre>
+        <button class="btn-ghost" id="copyKey" style="margin-top: 10px;">copy key</button>
+      `;
+      document.getElementById('copyKey').onclick = () => { navigator.clipboard.writeText(k.key); toast('copied'); };
+      document.getElementById('mUser').value = '';
+      document.getElementById('mNote').value = '';
+      toast(`key minted for ${k.boundUsername}`);
+      loadKeys();
+    } catch (e2) { toast(e2.message); }
+  });
 
   document.getElementById('addForm').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -105,14 +244,16 @@
         method: 'POST',
         body: {
           username: document.getElementById('aUser').value.trim(),
-          password: document.getElementById('aPass').value
+          password: document.getElementById('aPass').value,
+          owner: document.getElementById('aOwner').checked
         }
       });
-      out.innerHTML = `<span class="label">added: ${escapeHtml(r.username)}</span>`;
+      out.innerHTML = `<span class="label">added: ${escapeHtml(r.username)}${r.isOwner ? ' (owner)' : ''}</span>`;
       document.getElementById('aUser').value = '';
       document.getElementById('aPass').value = '';
+      document.getElementById('aOwner').checked = false;
       toast(`dev "${r.username}" added`);
-      load();
+      loadDevs();
     } catch (e2) {
       out.innerHTML = `<span class="label" style="color: var(--ink);">${escapeHtml(e2.message || 'failed')}</span>`;
     }

@@ -4,6 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>your drops · skullsploit</title>
+<link rel="icon" type="image/png" href="/img/skull.png" />
 <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
@@ -29,10 +30,49 @@
   </div>
   <div id="myList"></div>
 </section>
+
+<div class="modal-backdrop" id="editModal">
+  <div class="modal" style="max-width: 880px;">
+    <button class="modal-close" id="closeEdit">close</button>
+    <span class="label">edit script</span>
+    <h2 style="margin-top: 8px;">edit drop</h2>
+    <p class="muted" style="margin-top: 6px;">update what you've shared. saves immediately.</p>
+    <form id="editForm" style="margin-top: 24px;">
+      <div class="form-row">
+        <div class="field">
+          <span class="label">title</span>
+          <input id="eTitle" required maxlength="80" />
+        </div>
+        <div class="field">
+          <span class="label">category</span>
+          <select id="eCat">
+            <option value="script">script</option>
+            <option value="gui">gui</option>
+            <option value="morph">morph</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <span class="label">tags (comma separated)</span>
+        <input id="eTags" placeholder="esp, visual, util" />
+      </div>
+      <div class="field">
+        <span class="label">script body</span>
+        <textarea id="eBody" required style="min-height: 280px;"></textarea>
+      </div>
+      <div class="row" style="gap: 10px; margin-top: 12px;">
+        <button class="btn-solid" type="submit">save changes →</button>
+        <button class="btn-ghost" type="button" id="cancelEdit">cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script>mountFooter();</script>
 <script>
   let me = null;
   let mine = [];
+  let editingId = null;
 
   (async () => {
     me = await requireSession('dev');
@@ -62,6 +102,7 @@
           <div class="row" style="gap: 12px; align-items: baseline; flex-wrap: wrap;">
             <span class="script-card-title">${escapeHtml(s.title)}</span>
             <span class="chip">${escapeHtml(s.category || 'script')}</span>
+            ${s.updatedAt ? `<span class="muted" style="font-size: 11px;">edited ${formatDate(s.updatedAt)}</span>` : ''}
           </div>
           <div class="script-card-meta" style="margin-top: 8px;">
             <span>${formatDate(s.createdAt)}</span>
@@ -73,17 +114,55 @@
           </div>
         </div>
         <div class="script-card-actions">
+          <button class="btn-ghost" data-edit="${s.id}">edit</button>
           <button class="btn-ghost" data-del="${s.id}">remove</button>
         </div>
       </div>
     `).join('');
 
     document.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
-      if (!confirm('remove this script?')) return;
+      if (!confirm('remove this script? this cannot be undone.')) return;
       try { await api('/api/scripts/' + b.dataset.del, { method: 'DELETE' }); toast('removed'); load(); }
       catch (e) { toast(e.message); }
     });
+    document.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => openEdit(b.dataset.edit));
   }
+
+  function openEdit(id) {
+    const s = mine.find(x => x.id === id);
+    if (!s) return;
+    editingId = id;
+    document.getElementById('eTitle').value = s.title || '';
+    document.getElementById('eCat').value = s.category || 'script';
+    document.getElementById('eTags').value = (s.tags || []).join(', ');
+    document.getElementById('eBody').value = s.body || '';
+    document.getElementById('editModal').classList.add('open');
+  }
+  function closeEdit() {
+    editingId = null;
+    document.getElementById('editModal').classList.remove('open');
+  }
+  document.getElementById('closeEdit').addEventListener('click', closeEdit);
+  document.getElementById('cancelEdit').addEventListener('click', closeEdit);
+
+  document.getElementById('editForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!editingId) return;
+    try {
+      await api('/api/scripts/' + encodeURIComponent(editingId), {
+        method: 'PATCH',
+        body: {
+          title: document.getElementById('eTitle').value.trim(),
+          category: document.getElementById('eCat').value,
+          tags: document.getElementById('eTags').value.split(',').map(s => s.trim()).filter(Boolean),
+          body: document.getElementById('eBody').value
+        }
+      });
+      toast('saved');
+      closeEdit();
+      load();
+    } catch (e2) { toast(e2.message); }
+  });
 
   document.getElementById('search').addEventListener('input', render);
 </script>
