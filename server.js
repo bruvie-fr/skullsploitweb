@@ -754,6 +754,11 @@ function getMyToken(username) {
 function buildJoinUrl(placeId, jobId, token) {
   return `https://www.roblox.com/games/start?placeId=${encodeURIComponent(placeId)}&gameInstanceId=${encodeURIComponent(jobId)}&launchData=${encodeURIComponent(token)}`;
 }
+// placeId-only join URL: lets Roblox route us to any available server, or spin a new one up.
+// useful for offline places where every previous jobId is dead.
+function buildTryJoinUrl(placeId, token) {
+  return `https://www.roblox.com/games/start?placeId=${encodeURIComponent(placeId)}&launchData=${encodeURIComponent(token)}`;
+}
 
 app.get('/api/games', requireUser, (req, res) => {
   const cutoff = Date.now() - HEARTBEAT_TTL;
@@ -772,7 +777,8 @@ app.get('/api/games', requireUser, (req, res) => {
       lastSeen: p.lastSeen || null,
       servers: [],
       totalPlayers: 0,
-      pageUrl: `https://www.roblox.com/games/${encodeURIComponent(p.placeId)}`
+      pageUrl: `https://www.roblox.com/games/${encodeURIComponent(p.placeId)}`,
+      tryJoinUrl: buildTryJoinUrl(p.placeId, token)
     });
   }
 
@@ -788,7 +794,8 @@ app.get('/api/games', requireUser, (req, res) => {
         lastSeen: new Date(g.lastSeen).toISOString(),
         servers: [],
         totalPlayers: 0,
-        pageUrl: `https://www.roblox.com/games/${encodeURIComponent(g.placeId)}`
+        pageUrl: `https://www.roblox.com/games/${encodeURIComponent(g.placeId)}`,
+        tryJoinUrl: buildTryJoinUrl(g.placeId, token)
       });
     }
     const grp = byPlace.get(g.placeId);
@@ -854,6 +861,7 @@ app.get('/api/games/:placeId', requireUser, (req, res) => {
     name,
     thumbnail: thumb,
     pageUrl: `https://www.roblox.com/games/${encodeURIComponent(placeId)}`,
+    tryJoinUrl: buildTryJoinUrl(placeId, token),
     firstSeen: stored ? stored.firstSeen : null,
     lastSeen: stored ? stored.lastSeen : (live[0] ? new Date(live[0].lastSeen).toISOString() : null),
     totalPlayers: live.reduce((s, g) => s + g.players, 0),

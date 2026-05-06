@@ -17,6 +17,7 @@
       <h1 id="title" class="reveal reveal-2" style="margin-top: 14px; font-size: clamp(40px,8vw,96px); line-height: 1.05;">loading...</h1>
       <p id="sub" class="reveal reveal-3 lead" style="max-width: 560px; margin-top: 18px;">—</p>
       <div class="row" style="gap: 10px; margin-top: 20px; flex-wrap: wrap;">
+        <a id="tryJoinBtn" class="btn-solid" target="_blank" rel="noopener" href="#" style="text-decoration: none; display: none;">try joining →</a>
         <a id="pageLink" class="btn-ghost" target="_blank" rel="noopener" href="#" style="text-decoration: none; display: none;">roblox page →</a>
         <button class="btn-ghost" id="refreshBtn">refresh</button>
       </div>
@@ -86,6 +87,12 @@
 
     const link = document.getElementById('pageLink');
     if (game.pageUrl) { link.href = game.pageUrl; link.style.display = ''; }
+    const tryBtn = document.getElementById('tryJoinBtn');
+    if (game.tryJoinUrl) {
+      tryBtn.href = game.tryJoinUrl;
+      tryBtn.style.display = '';
+      tryBtn.textContent = game.live ? 'try any server →' : 'try joining anyway →';
+    }
 
     const tw = document.getElementById('thumbWrap');
     tw.innerHTML = game.thumbnail ? `<img src="${escapeHtml(game.thumbnail)}" alt="" referrerpolicy="no-referrer" onerror="this.style.display='none'" style="max-width: 320px; width: 100%; aspect-ratio: 1/1; object-fit: cover; border: 1px solid var(--line); display: block;" />` : '';
@@ -107,7 +114,12 @@
     const list = game.servers.filter(s => !q || s.id.toLowerCase().includes(q));
     const c = document.getElementById('serverList');
     if (!list.length) {
-      c.innerHTML = `<div class="panel"><p class="muted">${game.servers.length ? 'no servers match.' : 'no joinable servers right now.'}</p></div>`;
+      const msg = game.servers.length
+        ? 'no servers match.'
+        : (game.live
+            ? 'no joinable servers right now.'
+            : `no servers heartbeating right now. use <strong>try joining anyway</strong> above to get routed into any server roblox spins up — if the script is still installed, it'll heartbeat back in.`);
+      c.innerHTML = `<div class="panel"><p class="muted">${msg}</p></div>`;
       return;
     }
     c.innerHTML = `

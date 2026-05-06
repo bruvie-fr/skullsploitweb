@@ -90,27 +90,36 @@
       const chip = g.live
         ? `<span class="chip live">live</span>`
         : `<span class="chip dead">offline</span>`;
+      const tryBtn = g.tryJoinUrl
+        ? `<a class="${g.live ? 'btn-ghost' : 'btn-solid'} game-row-try" href="${escapeHtml(g.tryJoinUrl)}" target="_blank" rel="noopener" data-stop>${g.live ? 'try' : 'try join'} →</a>`
+        : '';
       return `
-      <a href="/game/${encodeURIComponent(g.placeId)}" class="game-row${g.live ? '' : ' game-row-offline'}" style="text-decoration: none;">
-        <div class="panel game-row-panel" style="padding: 0; overflow: hidden;">
-          <div class="row-between" style="padding: 18px 22px; gap: 16px; align-items: center;">
-            <div class="row" style="gap: 16px; align-items: center; min-width: 0;">
-              <div class="game-thumb">
-                ${g.thumbnail ? `<img src="${escapeHtml(g.thumbnail)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none'" />` : ''}
+      <div class="game-row${g.live ? '' : ' game-row-offline'}">
+        <a href="/game/${encodeURIComponent(g.placeId)}" class="game-row-link" style="text-decoration: none;">
+          <div class="panel game-row-panel" style="padding: 0; overflow: hidden;">
+            <div class="row-between" style="padding: 18px 22px; gap: 16px; align-items: center;">
+              <div class="row" style="gap: 16px; align-items: center; min-width: 0;">
+                <div class="game-thumb">
+                  ${g.thumbnail ? `<img src="${escapeHtml(g.thumbnail)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display='none'" />` : ''}
+                </div>
+                <div style="min-width: 0;">
+                  <div class="game-card-name">${escapeHtml(g.name)}</div>
+                  <div class="muted" style="font-size: 12px; margin-top: 4px;">${sub}</div>
+                </div>
               </div>
-              <div style="min-width: 0;">
-                <div class="game-card-name">${escapeHtml(g.name)}</div>
-                <div class="muted" style="font-size: 12px; margin-top: 4px;">${sub}</div>
+              <div class="row" style="gap: 12px; align-items: center;">
+                ${chip}
+                ${tryBtn}
+                <span class="muted" style="font-size: 12px;">view →</span>
               </div>
-            </div>
-            <div class="row" style="gap: 12px; align-items: center;">
-              ${chip}
-              <span class="muted" style="font-size: 12px;">view →</span>
             </div>
           </div>
-        </div>
-      </a>`;
+        </a>
+      </div>`;
     }).join('');
+
+    // make the "try" button open the join URL without also navigating to /game/:placeId
+    document.querySelectorAll('[data-stop]').forEach(b => b.addEventListener('click', e => e.stopPropagation()));
   }
 
   function formatLastSeen(iso) {
@@ -143,7 +152,8 @@
 </script>
 <style>
   button.active { color: var(--ink); border: 1px solid var(--line-2); }
-  .game-row { display: block; color: inherit; }
+  .game-row { display: block; }
+  .game-row-link { display: block; color: inherit; }
   .game-row-panel { transition: border-color 0.15s ease, transform 0.15s ease; }
   .game-row:hover .game-row-panel { border-color: var(--line-2); transform: translateY(-1px); }
   .game-row-offline .game-row-panel { opacity: 0.7; }
@@ -152,6 +162,7 @@
   .game-thumb { width: 64px; height: 64px; flex-shrink: 0; border: 1px solid var(--line); background: rgba(255,255,255,0.03); display:flex; align-items:center; justify-content:center; overflow:hidden; }
   .game-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .game-row-offline .game-thumb { filter: grayscale(0.6); }
+  .game-row-try { text-decoration: none; }
 </style>
 </body>
 </html>
