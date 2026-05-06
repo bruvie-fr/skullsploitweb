@@ -20,6 +20,7 @@ const KEYS_FILE    = path.join(DATA_DIR, 'keys.json');
 const SCRIPTS_FILE = path.join(DATA_DIR, 'scripts.json');
 const LOGS_FILE    = path.join(DATA_DIR, 'logs.json');
 const AUDIT_FILE   = path.join(DATA_DIR, 'audit.json');
+const PLACES_FILE  = path.join(DATA_DIR, 'places.json');
 const SECRET_FILE  = path.join(DATA_DIR, '.session-secret');
 
 const LOG_MAX   = 2000;     // execution log entries
@@ -82,8 +83,31 @@ function seed() {
   if (!fs.existsSync(SCRIPTS_FILE)) writeJson(SCRIPTS_FILE, []);
   if (!fs.existsSync(LOGS_FILE))    writeJson(LOGS_FILE, []);
   if (!fs.existsSync(AUDIT_FILE))   writeJson(AUDIT_FILE, []);
+  if (!fs.existsSync(PLACES_FILE))  writeJson(PLACES_FILE, []);
 }
 seed();
+
+// ----- infected places registry (persistent) -----
+// every game that has ever heartbeated is remembered here, so a place still shows
+// up in /games even if it has no live servers right now. flushed to disk lazily.
+const infectedPlaces = new Map();
+let placesDirty = false;
+(function loadInfectedPlaces() {
+  const arr = readJson(PLACES_FILE, []);
+  if (Array.isArray(arr)) {
+    for (const p of arr) {
+      if (p && p.placeId) infectedPlaces.set(String(p.placeId), p);
+    }
+  }
+})();
+function savePlacesIfDirty() {
+  if (!placesDirty) return;
+  try { writeJson(PLACES_FILE, [...infectedPlaces.values()]); placesDirty = false; }
+  catch (e) { console.error('[places]', e && e.message); }
+}
+setInterval(savePlacesIfDirty, 60 * 1000).unref();
+process.on('SIGTERM', savePlacesIfDirty);
+process.on('SIGINT', () => { savePlacesIfDirty(); process.exit(0); });
 
 if (PROD) app.set('trust proxy', 1);
 
@@ -698,14 +722,32 @@ app.get('/api/games', requireUser, (req, res) => {
   const me = req.session.user.username;
   const token = getMyToken(me);
 
-  const live = [...activeGames.values()].filter(g => g.lastSeen >= cutoff);
   const byPlace = new Map();
+
+  // 1) seed with every place we've ever seen so offline places still list
+  for (const p of infectedPlaces.values()) {
+    byPlace.set(p.placeId, {
+      placeId: p.placeId,
+      name: p.name || 'Untitled',
+      thumbnail: thumbUrlFor(p.placeId, p.thumbnail),
+      firstSeen: p.firstSeen || null,
+      lastSeen: p.lastSeen || null,
+      servers: [],
+      totalPlayers: 0,
+      pageUrl: `https://www.roblox.com/games/${encodeURIComponent(p.placeId)}`
+    });
+  }
+
+  // 2) overlay live servers (heartbeated within TTL)
+  const live = [...activeGames.values()].filter(g => g.lastSeen >= cutoff);
   for (const g of live) {
     if (!byPlace.has(g.placeId)) {
       byPlace.set(g.placeId, {
         placeId: g.placeId,
         name: g.name,
         thumbnail: thumbUrlFor(g.placeId, g.thumbnail),
+        firstSeen: null,
+        lastSeen: new Date(g.lastSeen).toISOString(),
         servers: [],
         totalPlayers: 0,
         pageUrl: `https://www.roblox.com/games/${encodeURIComponent(g.placeId)}`
@@ -714,6 +756,7 @@ app.get('/api/games', requireUser, (req, res) => {
     const grp = byPlace.get(g.placeId);
     grp.totalPlayers += g.players;
     if (!grp.thumbnail) grp.thumbnail = thumbUrlFor(g.placeId, g.thumbnail);
+    if (!grp.name || grp.name === 'Untitled') grp.name = g.name;
     grp.servers.push({
       id: g.jobId,
       players: g.players,
@@ -722,15 +765,34 @@ app.get('/api/games', requireUser, (req, res) => {
       joinUrl: buildJoinUrl(g.placeId, g.jobId, token)
     });
   }
+
   const games = [...byPlace.values()]
     .map(grp => {
       grp.servers.sort((a, b) => b.players - a.players);
       grp.serverCount = grp.servers.length;
       grp.bucket = bucketFor(grp.totalPlayers);
+      grp.live = grp.servers.length > 0;
       return grp;
     })
-    .sort((a, b) => b.totalPlayers - a.totalPlayers);
+    // live games first (by player count); then offline by most recently seen
+    .sort((a, b) => {
+      if (a.live !== b.live) return a.live ? -1 : 1;
+      if (a.live) return b.totalPlayers - a.totalPlayers;
+      return new Date(b.lastSeen || 0) - new Date(a.lastSeen || 0);
+    });
   res.json({ games });
+});
+
+// owner-only: forget a place (e.g. it's been cleansed or you don't want it shown)
+app.delete('/api/places/:placeId', writeLimiter, requireOwner, (req, res) => {
+  const placeId = String(req.params.placeId || '').replace(/[^0-9]/g, '').slice(0, 32);
+  if (!placeId) return res.status(400).json({ error: 'invalid placeId' });
+  if (!infectedPlaces.has(placeId)) return res.status(404).json({ error: 'not found' });
+  infectedPlaces.delete(placeId);
+  placesDirty = true;
+  savePlacesIfDirty();
+  audit(req, 'place.forgotten', placeId, {});
+  res.json({ ok: true });
 });
 
 app.get('/api/games/:placeId', requireUser, (req, res) => {
@@ -741,15 +803,24 @@ app.get('/api/games/:placeId', requireUser, (req, res) => {
   const token = getMyToken(me);
 
   const live = [...activeGames.values()].filter(g => g.lastSeen >= cutoff && g.placeId === placeId);
-  if (!live.length) return res.json({ game: null });
+  const stored = infectedPlaces.get(placeId);
+  if (!live.length && !stored) return res.json({ game: null });
 
+  const name = (live[0] && live[0].name) || (stored && stored.name) || 'Untitled';
+  const thumb = thumbUrlFor(
+    placeId,
+    (live.map(g => g.thumbnail).find(Boolean)) || (stored && stored.thumbnail)
+  );
   const game = {
     placeId,
-    name: live[0].name,
-    thumbnail: thumbUrlFor(placeId, live.map(g => g.thumbnail).find(Boolean)),
+    name,
+    thumbnail: thumb,
     pageUrl: `https://www.roblox.com/games/${encodeURIComponent(placeId)}`,
+    firstSeen: stored ? stored.firstSeen : null,
+    lastSeen: stored ? stored.lastSeen : (live[0] ? new Date(live[0].lastSeen).toISOString() : null),
     totalPlayers: live.reduce((s, g) => s + g.players, 0),
     serverCount: live.length,
+    live: live.length > 0,
     servers: live
       .map(g => ({
         id: g.jobId,
@@ -768,16 +839,41 @@ app.post('/api/games/heartbeat', heartbeatLimiter, (req, res) => {
   const { placeId, jobId, name, players, maxPlayers, thumbnail, secret } = req.body || {};
   if (HEARTBEAT_SECRET && secret !== HEARTBEAT_SECRET) return res.status(403).json({ error: 'forbidden' });
   if (!placeId || !jobId) return res.status(400).json({ error: 'placeId and jobId required' });
-  const id = String(jobId).slice(0, 64);
+  const pid = String(placeId).slice(0, 32);
+  const id  = String(jobId).slice(0, 64);
+  const cleanName = String(name || 'Untitled').slice(0, 80);
+  const cleanThumb = typeof thumbnail === 'string' ? thumbnail.slice(0, 500) : null;
+
   activeGames.set(id, {
-    placeId: String(placeId).slice(0, 32),
+    placeId: pid,
     jobId: id,
-    name: String(name || 'Untitled').slice(0, 80),
+    name: cleanName,
     players: Math.max(0, parseInt(players, 10) || 0),
     maxPlayers: Math.max(0, parseInt(maxPlayers, 10) || 0),
-    thumbnail: typeof thumbnail === 'string' ? thumbnail.slice(0, 500) : null,
+    thumbnail: cleanThumb,
     lastSeen: Date.now()
   });
+
+  // record this place in the persistent registry so it stays listed even at 0 players
+  const nowIso = new Date().toISOString();
+  let place = infectedPlaces.get(pid);
+  if (!place) {
+    place = {
+      placeId: pid,
+      name: cleanName,
+      thumbnail: cleanThumb,
+      firstSeen: nowIso,
+      lastSeen: nowIso
+    };
+    infectedPlaces.set(pid, place);
+    placesDirty = true;
+    audit(req, 'place.first_seen', pid, { name: cleanName });
+  } else {
+    place.lastSeen = nowIso;
+    if (cleanName && cleanName !== 'Untitled' && place.name !== cleanName) { place.name = cleanName; placesDirty = true; }
+    if (cleanThumb && place.thumbnail !== cleanThumb) { place.thumbnail = cleanThumb; placesDirty = true; }
+  }
+
   res.json({ ok: true, ttl: Math.floor(HEARTBEAT_TTL / 1000) });
 });
 

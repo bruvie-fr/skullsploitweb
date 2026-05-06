@@ -61,19 +61,28 @@
 
   function render() {
     if (!game) {
-      document.getElementById('title').textContent = 'no live servers';
-      document.getElementById('sub').textContent = 'this game has no active servers running our backdoor right now. check back in a bit.';
+      document.getElementById('title').textContent = 'unknown place';
+      document.getElementById('sub').textContent = 'we have no record of this place. it may never have been infected, or it was forgotten.';
       document.getElementById('srvCount').textContent = '0';
       document.getElementById('pCount').textContent = '0';
       document.getElementById('bk').textContent = '—';
-      document.getElementById('serverList').innerHTML = `<div class="panel"><p class="muted">no joinable servers right now.</p></div>`;
+      document.getElementById('serverList').innerHTML = `<div class="panel"><p class="muted">nothing to show.</p></div>`;
       return;
     }
-    document.getElementById('title').textContent = game.name;
-    document.getElementById('sub').textContent = `${game.totalPlayers.toLocaleString()} player${game.totalPlayers === 1 ? '' : 's'} across ${game.serverCount} server${game.serverCount === 1 ? '' : 's'} · placeId ${game.placeId}`;
+    document.getElementById('title').textContent = game.name || 'Untitled';
+    let subParts;
+    if (game.live) {
+      subParts = [`${game.totalPlayers.toLocaleString()} player${game.totalPlayers === 1 ? '' : 's'} across ${game.serverCount} server${game.serverCount === 1 ? '' : 's'}`];
+    } else {
+      subParts = ['no live servers right now'];
+      if (game.lastSeen) subParts.push(`last seen ${formatAgo(new Date(game.lastSeen))}`);
+      if (game.firstSeen) subParts.push(`first seen ${new Date(game.firstSeen).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}`);
+    }
+    subParts.push(`placeId ${game.placeId}`);
+    document.getElementById('sub').textContent = subParts.join(' · ');
     document.getElementById('srvCount').textContent = game.serverCount;
     document.getElementById('pCount').textContent = game.totalPlayers.toLocaleString();
-    document.getElementById('bk').textContent = game.bucket || '—';
+    document.getElementById('bk').textContent = game.live ? (game.bucket || '—') : 'offline';
 
     const link = document.getElementById('pageLink');
     if (game.pageUrl) { link.href = game.pageUrl; link.style.display = ''; }
@@ -82,6 +91,14 @@
     tw.innerHTML = game.thumbnail ? `<img src="${escapeHtml(game.thumbnail)}" alt="" referrerpolicy="no-referrer" onerror="this.style.display='none'" style="max-width: 320px; width: 100%; aspect-ratio: 1/1; object-fit: cover; border: 1px solid var(--line); display: block;" />` : '';
 
     renderServers();
+  }
+
+  function formatAgo(d) {
+    const s = Math.floor((Date.now() - d.getTime()) / 1000);
+    if (s < 60) return s + 's ago';
+    if (s < 3600) return Math.floor(s / 60) + 'm ago';
+    if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+    return Math.floor(s / 86400) + 'd ago';
   }
 
   function renderServers() {
