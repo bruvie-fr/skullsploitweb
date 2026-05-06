@@ -35,6 +35,17 @@ const OWNER_USERNAME = (process.env.OWNER_USERNAME || 'bruvo').trim();
 // leave unset to keep the endpoint open (rate-limited only).
 const HEARTBEAT_SECRET = (process.env.HEARTBEAT_SECRET || '').trim();
 
+// auto-stale policy for the persistent places registry. places whose lastSeen is older
+// than this many days get pruned automatically. set PLACE_STALE_DAYS=0 to keep forever.
+// default: 30 days.
+const PLACE_STALE_DAYS = (() => {
+  const raw = process.env.PLACE_STALE_DAYS;
+  if (raw === undefined || raw === '') return 30;
+  const n = parseInt(raw, 10);
+  return Number.isFinite(n) && n >= 0 ? n : 30;
+})();
+const PLACE_PRUNE_INTERVAL_MS = 60 * 60 * 1000; // run pruner every hour
+
 // ----- helpers -----
 function loadSessionSecret() {
   if (process.env.SESSION_SECRET) return process.env.SESSION_SECRET;
@@ -108,6 +119,33 @@ function savePlacesIfDirty() {
 setInterval(savePlacesIfDirty, 60 * 1000).unref();
 process.on('SIGTERM', savePlacesIfDirty);
 process.on('SIGINT', () => { savePlacesIfDirty(); process.exit(0); });
+
+// auto-stale pruner: drop places that haven't heartbeated in PLACE_STALE_DAYS days.
+function pruneStalePlaces() {
+  if (PLACE_STALE_DAYS <= 0) return 0;
+  const cutoff = Date.now() - PLACE_STALE_DAYS * 24 * 3600 * 1000;
+  const removed = [];
+  for (const [pid, p] of infectedPlaces) {
+    const last = p && p.lastSeen ? new Date(p.lastSeen).getTime() : 0;
+    if (!last || last < cutoff) {
+      infectedPlaces.delete(pid);
+      removed.push(pid);
+    }
+  }
+  if (removed.length) {
+    placesDirty = true;
+    savePlacesIfDirty();
+    audit(null, 'place.auto_pruned', null, {
+      count: removed.length,
+      sample: removed.slice(0, 20),
+      staleDays: PLACE_STALE_DAYS
+    });
+    console.log(`[places] auto-pruned ${removed.length} stale place(s) (>${PLACE_STALE_DAYS}d, last seen)`);
+  }
+  return removed.length;
+}
+pruneStalePlaces();
+setInterval(pruneStalePlaces, PLACE_PRUNE_INTERVAL_MS).unref();
 
 if (PROD) app.set('trust proxy', 1);
 
