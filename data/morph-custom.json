@@ -1,0 +1,2225 @@
+{
+  "somemorph": {
+    "id": 97495636830643,
+    "style": "colon",
+    "method": "Load",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "args": [
+      "USERNAME"
+    ],
+    "updatedAt": "2026-05-09T21:24:42.460Z",
+    "updatedBy": "system"
+  },
+  "Jester": {
+    "id": 110306212034916,
+    "style": "colon",
+    "method": "Init",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "args": [
+      "USERNAME"
+    ],
+    "updatedAt": "2026-05-09T21:24:42.461Z",
+    "updatedBy": "system"
+  },
+  "AdultMimic": {
+    "id": 130962958730541,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "adultmimic"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.757Z",
+    "updatedBy": "system"
+  },
+  "CharlieKirk": {
+    "id": 108608330833579,
+    "style": "call",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "args": [
+      "USERNAME"
+    ],
+    "updatedAt": "2026-05-09T21:24:42.461Z",
+    "updatedBy": "system"
+  },
+  "Epstein": {
+    "id": 137067131500282,
+    "style": "call",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "args": [
+      "USERNAME"
+    ],
+    "updatedAt": "2026-05-09T21:24:42.461Z",
+    "updatedBy": "system"
+  },
+  "Epsteinexe": {
+    "id": 134034440311399,
+    "style": "colon",
+    "method": "load",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "args": [
+      "USERNAME"
+    ],
+    "updatedAt": "2026-05-09T21:24:42.461Z",
+    "updatedBy": "system"
+  },
+  "Peeka": {
+    "id": 91316798180463,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "P.E.K.K.A"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "megaknight": {
+    "id": 91316798180463,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "Mega Knight"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "monk": {
+    "id": 91316798180463,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "Monk"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "Knight": {
+    "id": 91316798180463,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "Knight"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "Barbarian": {
+    "id": 91316798180463,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "Barbarian"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "Wizard": {
+    "id": 91316798180463,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "Wizard"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "Guardienne": {
+    "id": 91316798180463,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "Guardienne"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "MrBoss": {
+    "id": 119150556720214,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "mr boss"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "locust": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "locust"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "cartooncat": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "cartoon cat"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "cartoondog": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "cartoon dog"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "cartoondog2": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "cartoon dog2"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "cartoonmouse": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "cartoon mouse"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "ogcartooncat": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "og cartoon cat"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "bigcharlie": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "big charlie"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "highwayworm": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "highwayworm"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "hush": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "hush"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "livinghouse": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "living house / househead"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "livinghousev2": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "living house / househead V2"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "longhorse": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "long horse"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "milkwalkerabassador": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "milkwalker abassador"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "nervoushouseguest": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "nervous houseguest"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "ogbreakingnews": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "og breaking news"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "peepingtom": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "peeping tom"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "ribbit": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "ribbit"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "starlinercinema": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "starliner cinema"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "streethorse": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "street horse"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "theangel": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "the angel"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "thehugger": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "the hugger"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "thelamb": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "the lamb"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "yoyo": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "yoyo"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "bloodsirenhead": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "blood siren head"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "darksirenhead": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "dark siren head"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "icesirenhead": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "ice siren head"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "shadowsirenhead": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "shadow siren head"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "trafficlighthead": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "trafficlight head"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "woodsirenhead": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "wood siren head"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "anxiousdog": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "anxious dog"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "bonesworth": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "bonesworth"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "breakingnews": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "breaking news"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "bridgeworm": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "bridgeworm"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "chickenghost": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "chicken ghost"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "costumeman": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "costume man"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "countryroadcreature": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "country road creature"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "day17": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "day 17"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "day18": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "day 18"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "forgottenbaby": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "forgotten baby"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "ghostpig": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "ghost pig"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "holeman": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "hole man"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "househeadminion": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "househead minion"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "humanoidrabbit": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "humanoid rabbit"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "sirenhead2": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "sirenhead2"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "sirenhead": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "sirenhead"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "ogsirenhead": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "og siren head"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "lightsirenhead": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "light siren head"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "hmsam": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "hmsam"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "theextraslide": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "the extra slide"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "phen": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "phen"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "organator": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "organator"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "guilt": {
+    "id": 75834950186546,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "guilt"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "walkingmask": {
+    "id": 125375466492613,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "walking mask"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "skinwalker": {
+    "id": 125375466492613,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "skinwalker"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "richardboderman": {
+    "id": 125375466492613,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "richard boderman"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "rake": {
+    "id": 125375466492613,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "rake"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "prettyface": {
+    "id": 125375466492613,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "prettyface"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "memphistennassee": {
+    "id": 125375466492613,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "memphis tennassee"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "KillyWilly": {
+    "id": 110475955009271,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "Killy Willy"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "kate": {
+    "id": 125375466492613,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "kate"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "insanity": {
+    "id": 125375466492613,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "insanity"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "goatman": {
+    "id": 125375466492613,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "goatman"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "fresnonightcrawler": {
+    "id": 125375466492613,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "fresno nightcrawler"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "freddykruegar": {
+    "id": 125375466492613,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "freddy kruegar"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "fleshgait": {
+    "id": 125375466492613,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "fleshgait"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "ethre": {
+    "id": 125375466492613,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "ethre"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "deathclaw": {
+    "id": 125375466492613,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "deathclaw"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "craig": {
+    "id": 125375466492613,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "craig"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "shinsonic": {
+    "id": 77055143496081,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "shin sonic"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "smallshin": {
+    "id": 77055143496081,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "small shin"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "soniceyx": {
+    "id": 77055143496081,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "sonic.eyx"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "americandemo": {
+    "id": 111697793579923,
+    "style": "args",
+    "method": "americandemo",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "args": [
+      "USERNAME"
+    ],
+    "updatedAt": "2026-05-09T21:24:42.461Z",
+    "updatedBy": "system"
+  },
+  "huggywuggy": {
+    "id": 89917399227100,
+    "style": "model",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z"
+  },
+  "catnap": {
+    "id": 92410132581477,
+    "style": "model",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z"
+  },
+  "EggDog": {
+    "id": 4698640272,
+    "style": "args",
+    "method": "load",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "args": [
+      "USERNAME"
+    ],
+    "updatedAt": "2026-05-09T21:24:42.461Z",
+    "updatedBy": "system"
+  },
+  "BuffSly": {
+    "id": 8151656059,
+    "style": "args",
+    "method": "load",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "args": [
+      "USERNAME"
+    ],
+    "updatedAt": "2026-05-09T21:24:42.461Z",
+    "updatedBy": "system"
+  },
+  "BabyGorgon": {
+    "id": 91951133830378,
+    "style": "args",
+    "method": "load",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "args": [
+      "USERNAME"
+    ],
+    "updatedAt": "2026-05-09T21:24:42.461Z",
+    "updatedBy": "system"
+  },
+  "scp096": {
+    "id": 5972874843,
+    "style": "args",
+    "method": "load",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "args": [
+      "USERNAME"
+    ],
+    "updatedAt": "2026-05-09T21:24:42.461Z",
+    "updatedBy": "system"
+  },
+  "bontherabbit": {
+    "id": 139374527508227,
+    "style": "model",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z"
+  },
+  "scp939": {
+    "id": 83125148037651,
+    "style": "model",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z"
+  },
+  "scp8601": {
+    "id": 138004928346024,
+    "style": "model",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z"
+  },
+  "schizofreniav2": {
+    "id": 104177127019087,
+    "style": "model",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z"
+  },
+  "scp096unity": {
+    "id": 89624485379828,
+    "style": "model",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z"
+  },
+  "deathangel": {
+    "id": 75278687178504,
+    "style": "model",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z"
+  },
+  "scp106": {
+    "id": 98640854312727,
+    "style": "model",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z"
+  },
+  "scp457": {
+    "id": 127501805065640,
+    "style": "model",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z"
+  },
+  "scp682": {
+    "id": 135069726320263,
+    "style": "model",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z"
+  },
+  "horror": {
+    "id": 75388891846976,
+    "style": "model",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z"
+  },
+  "scp096comix": {
+    "id": 77331462129604,
+    "style": "model",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z"
+  },
+  "scp096reskin": {
+    "id": 137246681855235,
+    "style": "model",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z"
+  },
+  "scp096b": {
+    "id": 104391128955930,
+    "style": "model",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z"
+  },
+  "killdroid": {
+    "id": 139285255810034,
+    "style": "args",
+    "method": "Killdroid",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "args": [
+      "USERNAME"
+    ],
+    "updatedAt": "2026-05-09T21:24:42.461Z",
+    "updatedBy": "system"
+  },
+  "artful": {
+    "id": 139285255810034,
+    "style": "args",
+    "method": "Artful",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "args": [
+      "USERNAME"
+    ],
+    "updatedAt": "2026-05-09T21:24:42.461Z",
+    "updatedBy": "system"
+  },
+  "badware": {
+    "id": 139285255810034,
+    "style": "args",
+    "method": "Badware",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "args": [
+      "USERNAME"
+    ],
+    "updatedAt": "2026-05-09T21:24:42.461Z",
+    "updatedBy": "system"
+  },
+  "mequot": {
+    "id": 139285255810034,
+    "style": "args",
+    "method": "MeQuot",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "args": [
+      "USERNAME"
+    ],
+    "updatedAt": "2026-05-09T21:24:42.461Z",
+    "updatedBy": "system"
+  },
+  "pursuer": {
+    "id": 139285255810034,
+    "style": "args",
+    "method": "Pursuer",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "args": [
+      "USERNAME"
+    ],
+    "updatedAt": "2026-05-09T21:24:42.461Z",
+    "updatedBy": "system"
+  },
+  "harken": {
+    "id": 139285255810034,
+    "style": "args",
+    "method": "Harken",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "args": [
+      "USERNAME"
+    ],
+    "updatedAt": "2026-05-09T21:24:42.461Z",
+    "updatedBy": "system"
+  },
+  "paranoy": {
+    "id": 85145595143839,
+    "style": "args",
+    "method": "heislettuce",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "args": [
+      "USERNAME"
+    ],
+    "updatedAt": "2026-05-09T21:24:42.461Z",
+    "updatedBy": "system"
+  },
+  "paranoyv2": {
+    "id": 115054413998661,
+    "style": "args",
+    "method": "Canner_Paranoy",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "args": [
+      "USERNAME"
+    ],
+    "updatedAt": "2026-05-09T21:24:42.461Z",
+    "updatedBy": "system"
+  },
+  "juggernaut": {
+    "id": 7486656912,
+    "style": "args",
+    "method": "Juggernaut",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "args": [
+      "USERNAME"
+    ],
+    "updatedAt": "2026-05-09T21:24:42.461Z",
+    "updatedBy": "system"
+  },
+  "a10strike": {
+    "id": 8686293780,
+    "style": "args",
+    "method": "A10",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "args": [
+      "USERNAME"
+    ],
+    "updatedAt": "2026-05-09T21:24:42.461Z",
+    "updatedBy": "system"
+  },
+  "lilnas": {
+    "id": 125375466492613,
+    "style": "args",
+    "method": "forkyplayable",
+    "args": [
+      "USERNAME",
+      "THE NAS"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "Cyborg": {
+    "id": 125375466492613,
+    "style": "args",
+    "method": "forkyplayable",
+    "args": [
+      "USERNAME",
+      "Cyborg"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "Jonsey": {
+    "id": 125375466492613,
+    "style": "args",
+    "method": "forkyplayable",
+    "args": [
+      "USERNAME",
+      "Jonsey"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "Strider": {
+    "id": 139111114772425,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "strider"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "FastH": {
+    "id": 136344973611024,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "Fast Handcrab"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "EnergyDemo": {
+    "id": 99939256152642,
+    "style": "args",
+    "method": "load",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "args": [
+      "USERNAME"
+    ],
+    "updatedAt": "2026-05-09T21:24:42.461Z",
+    "updatedBy": "system"
+  },
+  "MagmaGorgon": {
+    "id": 89045479992260,
+    "style": "args",
+    "method": "load",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "args": [
+      "USERNAME"
+    ],
+    "updatedAt": "2026-05-09T21:24:42.461Z",
+    "updatedBy": "system"
+  },
+  "Faster": {
+    "id": 121053606797327,
+    "style": "args",
+    "method": "load",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "args": [
+      "USERNAME"
+    ],
+    "updatedAt": "2026-05-09T21:24:42.461Z",
+    "updatedBy": "system"
+  },
+  "sawcrazy": {
+    "id": 114287881125205,
+    "style": "args",
+    "method": "load",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "args": [
+      "USERNAME"
+    ],
+    "updatedAt": "2026-05-09T21:24:42.461Z",
+    "updatedBy": "system"
+  },
+  "sawrunner": {
+    "id": 129884414175186,
+    "style": "args",
+    "method": "load",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "args": [
+      "USERNAME"
+    ],
+    "updatedAt": "2026-05-09T21:24:42.461Z",
+    "updatedBy": "system"
+  },
+  "taller": {
+    "id": 128295083288420,
+    "style": "args",
+    "method": "load",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "args": [
+      "USERNAME"
+    ],
+    "updatedAt": "2026-05-09T21:24:42.461Z",
+    "updatedBy": "system"
+  },
+  "Suitborn": {
+    "id": 77786444115978,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "suitborn"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "Soul": {
+    "id": 77786444115978,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "soul"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "Jaguar": {
+    "id": 77786444115978,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "jaguar"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "GhostBorn": {
+    "id": 77786444115978,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "ghostborn"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "Cybot": {
+    "id": 77786444115978,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "cybot"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "Bart": {
+    "id": 77786444115978,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "bart"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "BloodBath": {
+    "id": 77786444115978,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "Bloodbath"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "SCP_049": {
+    "id": 70922780816825,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "scp-049"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "SCP_1499_1": {
+    "id": 70922780816825,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "scp-1499-1"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "SCP_2472_3": {
+    "id": 70922780816825,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "scp-2472-3"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "SCP_966": {
+    "id": 70922780816825,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "scp966"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "EyeKiller": {
+    "id": 115201570183639,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "eyekiller - 087"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "RedMist": {
+    "id": 115201570183639,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "redmistmonster - 087"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "ClothWanderer": {
+    "id": 115201570183639,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "clothwanderer - 087"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "MaskedMan": {
+    "id": 115201570183639,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "maskedman - 087"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "Smiler": {
+    "id": 137642005099119,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "smiler"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "AraneaMembri": {
+    "id": 137642005099119,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "Aranea Membri"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "NeighborhoodWatch": {
+    "id": 137642005099119,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "neighborhood watch"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "Bacteria": {
+    "id": 137642005099119,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "bacteria"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "DeformedHowler": {
+    "id": 137642005099119,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "deformedhowler"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "Howler": {
+    "id": 137642005099119,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "howler"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "RoyalGiant": {
+    "id": 94316079213339,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "Royal Giant"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "_pl1": {
+    "id": 1764113404,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "_pl1"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.787Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "Inspector": {
+    "id": 133480789068496,
+    "style": "args",
+    "method": "forkyplayable",
+    "args": [
+      "USERNAME",
+      "Inspector"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.788Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "Hunter": {
+    "id": 139111114772425,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "hunter"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.788Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "PoisonZombie": {
+    "id": 136344973611024,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "poison zombie"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.788Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "HeadcrabZombie": {
+    "id": 136344973611024,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "headcrab zombie"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.788Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "FastZombie": {
+    "id": 136344973611024,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "fastzombie"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.788Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "Barney": {
+    "id": 136344973611024,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "barney"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.788Z",
+    "updatedAt": "2026-05-09T21:19:05.761Z",
+    "updatedBy": "system"
+  },
+  "PoisonHeadcrab": {
+    "id": 136344973611024,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "Poison Headcrab"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.788Z",
+    "updatedAt": "2026-05-09T21:19:05.762Z",
+    "updatedBy": "system"
+  },
+  "Headcrab": {
+    "id": 136344973611024,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "Headcrab"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.788Z",
+    "updatedAt": "2026-05-09T21:19:05.762Z",
+    "updatedBy": "system"
+  },
+  "HL1Headcrab": {
+    "id": 136344973611024,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "HL1 Headcrab"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.788Z",
+    "updatedAt": "2026-05-09T21:19:05.762Z",
+    "updatedBy": "system"
+  },
+  "FastHandcrab": {
+    "id": 136344973611024,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "Fast Handcrab"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.788Z",
+    "updatedAt": "2026-05-09T21:19:05.762Z",
+    "updatedBy": "system"
+  },
+  "Shocktrooper": {
+    "id": 92422644804143,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "shocktrooper"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.788Z",
+    "updatedAt": "2026-05-09T21:19:05.762Z",
+    "updatedBy": "system"
+  },
+  "Sergeant": {
+    "id": 92422644804143,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "sergeant"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.788Z",
+    "updatedAt": "2026-05-09T21:19:05.762Z",
+    "updatedBy": "system"
+  },
+  "Floater": {
+    "id": 92422644804143,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "floater"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.788Z",
+    "updatedAt": "2026-05-09T21:19:05.762Z",
+    "updatedBy": "system"
+  },
+  "HL2Barnacle": {
+    "id": 92422644804143,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "hl2barnacle"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.788Z",
+    "updatedAt": "2026-05-09T21:19:05.762Z",
+    "updatedBy": "system"
+  },
+  "TentacleV2": {
+    "id": 92422644804143,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "tentaclev2"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.788Z",
+    "updatedAt": "2026-05-09T21:19:05.762Z",
+    "updatedBy": "system"
+  },
+  "Gonome": {
+    "id": 92422644804143,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "gonome"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.788Z",
+    "updatedAt": "2026-05-09T21:19:05.762Z",
+    "updatedBy": "system"
+  },
+  "Bullsquid": {
+    "id": 92422644804143,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "bullsquid"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.788Z",
+    "updatedAt": "2026-05-09T21:19:05.762Z",
+    "updatedBy": "system"
+  },
+  "Cremator": {
+    "id": 92422644804143,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "cremator"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.788Z",
+    "updatedAt": "2026-05-09T21:19:05.762Z",
+    "updatedBy": "system"
+  },
+  "AntlionAlyx": {
+    "id": 92422644804143,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "antlionalyx"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.788Z",
+    "updatedAt": "2026-05-09T21:19:05.762Z",
+    "updatedBy": "system"
+  },
+  "MrFriendly": {
+    "id": 92422644804143,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "mr friendly"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.788Z",
+    "updatedAt": "2026-05-09T21:19:05.762Z",
+    "updatedBy": "system"
+  },
+  "Skinst": {
+    "id": 137620872341555,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "skinstealer"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.788Z",
+    "updatedAt": "2026-05-09T21:19:05.762Z",
+    "updatedBy": "system"
+  },
+  "Faceless": {
+    "id": 102798848281487,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "faceless"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.788Z",
+    "updatedAt": "2026-05-09T21:19:05.762Z",
+    "updatedBy": "system"
+  },
+  "V2MetalDemogorgon": {
+    "id": 136738107747801,
+    "style": "args",
+    "method": "metaldemov2",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.788Z",
+    "args": [
+      "USERNAME"
+    ],
+    "updatedAt": "2026-05-09T21:24:42.461Z",
+    "updatedBy": "system"
+  },
+  "MetalDemogorgon": {
+    "id": 139477165951586,
+    "style": "args",
+    "method": "metaldemo",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.788Z",
+    "args": [
+      "USERNAME"
+    ],
+    "updatedAt": "2026-05-09T21:24:42.461Z",
+    "updatedBy": "system"
+  },
+  "HorrorDemo": {
+    "id": 99252956302064,
+    "style": "args",
+    "method": "load",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.788Z",
+    "args": [
+      "USERNAME"
+    ],
+    "updatedAt": "2026-05-09T21:24:42.461Z",
+    "updatedBy": "system"
+  },
+  "FemboyDemo": {
+    "id": 89423300721346,
+    "style": "args",
+    "method": "load",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.788Z",
+    "args": [
+      "USERNAME"
+    ],
+    "updatedAt": "2026-05-09T21:24:42.461Z",
+    "updatedBy": "system"
+  },
+  "DemoV3": {
+    "id": 86227987812851,
+    "style": "args",
+    "method": "load",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.788Z",
+    "args": [
+      "USERNAME"
+    ],
+    "updatedAt": "2026-05-09T21:24:42.461Z",
+    "updatedBy": "system"
+  },
+  "DarkmatterDemo": {
+    "id": 113817031523881,
+    "style": "args",
+    "method": "load",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.788Z",
+    "args": [
+      "USERNAME"
+    ],
+    "updatedAt": "2026-05-09T21:24:42.461Z",
+    "updatedBy": "system"
+  },
+  "BoxyBoo": {
+    "id": 138108464845575,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "boxy boo"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.788Z",
+    "updatedAt": "2026-05-09T21:19:05.762Z",
+    "updatedBy": "system"
+  },
+  "GoldenFreddy": {
+    "id": 13798449568,
+    "style": "call",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.788Z",
+    "args": [
+      "USERNAME"
+    ],
+    "updatedAt": "2026-05-09T21:24:42.461Z",
+    "updatedBy": "system"
+  },
+  "WalterWhite": {
+    "id": 99341957464724,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "Walter"
+    ],
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.788Z",
+    "updatedAt": "2026-05-09T21:19:05.762Z",
+    "updatedBy": "system"
+  },
+  "Trump": {
+    "id": 88055505063944,
+    "style": "call",
+    "addedBy": "system",
+    "addedAt": "2026-05-09T21:10:23.788Z",
+    "args": [
+      "USERNAME"
+    ],
+    "updatedAt": "2026-05-09T21:24:42.461Z",
+    "updatedBy": "system"
+  },
+  "pumpkinrabbit": {
+    "id": 87513953915554,
+    "style": "args",
+    "method": "MorphMonster",
+    "args": [
+      "USERNAME",
+      "pumpkinrabbit"
+    ],
+    "addedBy": "bruvo",
+    "addedAt": "2026-05-09T21:10:44.090Z",
+    "updatedAt": "2026-05-09T21:19:05.762Z",
+    "updatedBy": "system"
+  }
+}
