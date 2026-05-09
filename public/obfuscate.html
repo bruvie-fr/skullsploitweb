@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>obfuscate · skullsploit</title>
+<link rel="icon" type="image/png" href="/img/skull.png" />
+<link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+<script src="/js/common.js"></script>
+<script>mountNav('/obfuscate');</script>
+<section class="hero" style="padding-top: clamp(60px,8vw,100px); padding-bottom: clamp(36px,5vw,56px);">
+  <div class="hero-grid">
+    <div>
+      <span class="label reveal reveal-1">tools</span>
+      <h1 class="reveal reveal-2" style="margin-top: 14px; font-size: clamp(48px,11vw,140px);">obfuscate<span class="cursor"></span></h1>
+      <p class="reveal reveal-3 lead" style="max-width: 540px; margin-top: 22px;">
+        paste luau in. get scrambled luau out. source-level transforms only — no <span class="kbd">loadstring</span>, no <span class="kbd">bit32</span>, no <span class="kbd">debug</span>. runs anywhere luau runs.
+      </p>
+      <p class="reveal reveal-3 lead" style="max-width: 540px; margin-top: 10px; font-size: 13px; color: var(--ink-faint);">
+        strings are XOR-encrypted into a runtime-decoded table. number literals get indirected. every <span class="kbd">local</span> and function param gets a randomized lookalike name (O/0/o/I/l/1 mix). globals, methods, and field names stay untouched so APIs keep working.
+      </p>
+      <p class="reveal reveal-3 lead" style="max-width: 540px; margin-top: 10px; font-size: 13px; color: var(--ink-faint);">
+        honest disclaimer: nothing on a luau VM is uncrackable. this is layered enough to bounce skids and waste real time for analysts. use it for what it actually is.
+      </p>
+    </div>
+    <aside class="hero-meta reveal reveal-4">
+      <div><span class="k">input</span><span class="v" id="mIn">0</span></div>
+      <div><span class="k">output</span><span class="v" id="mOut">0</span></div>
+      <div><span class="k">strings</span><span class="v" id="mStr">—</span></div>
+      <div><span class="k">numbers</span><span class="v" id="mNum">—</span></div>
+    </aside>
+  </div>
+</section>
+<section class="container-wide" style="padding-top: 0;">
+  <div class="obf-grid">
+    <div class="stack-lg">
+      <div class="row-between">
+        <span class="label">source · luau</span>
+        <div class="row" style="gap: 8px; flex-wrap: wrap;">
+          <label class="chip" style="cursor: pointer;">
+            <input type="checkbox" id="optStrings" checked style="width: auto; margin: 0; vertical-align: middle;" />
+            <span>encrypt strings</span>
+          </label>
+          <label class="chip" style="cursor: pointer;">
+            <input type="checkbox" id="optNumbers" checked style="width: auto; margin: 0; vertical-align: middle;" />
+            <span>indirect numbers</span>
+          </label>
+          <label class="chip" style="cursor: pointer;">
+            <input type="checkbox" id="optRename" checked style="width: auto; margin: 0; vertical-align: middle;" />
+            <span>rename locals</span>
+          </label>
+          <label class="chip" style="cursor: pointer;">
+            <input type="checkbox" id="optComments" checked style="width: auto; margin: 0; vertical-align: middle;" />
+            <span>strip comments</span>
+          </label>
+        </div>
+      </div>
+      <textarea id="src" placeholder="-- paste luau source here&#10;print('hello world')" spellcheck="false"></textarea>
+      <div class="row" style="gap: 10px; flex-wrap: wrap;">
+        <button class="btn-solid" id="runBtn">obfuscate →</button>
+        <button class="btn-ghost" id="loadSampleBtn">load sample</button>
+        <button class="btn-ghost" id="clearBtn">clear</button>
+        <span class="muted" id="errLine" style="font-size: 12px;"></span>
+      </div>
+    </div>
+    <div class="stack-lg">
+      <div class="row-between">
+        <span class="label">output · paste this anywhere loadstring runs</span>
+        <div class="row" style="gap: 8px;">
+          <button class="btn-ghost" id="copyBtn" disabled>copy</button>
+          <button class="btn-ghost" id="downloadBtn" disabled>download .lua</button>
+        </div>
+      </div>
+      <textarea id="out" readonly placeholder="// output appears here" spellcheck="false"></textarea>
+      <div class="muted" style="font-size: 12px;" id="statsLine">—</div>
+    </div>
+  </div>
+</section>
+<script>mountFooter();</script>
+<script>
+  const SAMPLE = `-- a tiny sample
+local Players = game:GetService("Players")
+
+local function notify(msg)
+  print("[skull]", msg)
+end
+
+local me = Players.LocalPlayer
+notify("welcome, " .. (me and me.Name or "stranger"))
+
+for i = 1, 3 do
+  notify("loop iter " .. tostring(i))
+end
+`;
+
+  const $ = (id) => document.getElementById(id);
+
+  (async () => {
+    const me = await requireSession('dev');
+    if (!me) return;
+    $('src').addEventListener('input', () => {
+      $('mIn').textContent = new Blob([$('src').value]).size + 'b';
+    });
+    $('runBtn').addEventListener('click', run);
+    $('clearBtn').addEventListener('click', () => {
+      $('src').value = ''; $('out').value = ''; $('mIn').textContent = '0';
+      $('mOut').textContent = '0'; $('mStr').textContent = '—';
+      $('statsLine').textContent = '—'; $('errLine').textContent = '';
+      $('copyBtn').disabled = true; $('downloadBtn').disabled = true;
+    });
+    $('loadSampleBtn').addEventListener('click', () => {
+      $('src').value = SAMPLE;
+      $('mIn').textContent = new Blob([SAMPLE]).size + 'b';
+    });
+    $('copyBtn').addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText($('out').value); toast('copied'); }
+      catch { $('out').select(); document.execCommand('copy'); toast('copied'); }
+    });
+    $('downloadBtn').addEventListener('click', () => {
+      const blob = new Blob([$('out').value], { type: 'text/plain' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'obfuscated.lua';
+      document.body.appendChild(a); a.click();
+      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 0);
+    });
+    // ctrl/cmd+enter to run
+    $('src').addEventListener('keydown', e => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); run(); }
+    });
+  })();
+
+  async function run() {
+    const source = $('src').value;
+    if (!source.trim()) { $('errLine').textContent = 'paste some code first'; return; }
+    $('errLine').textContent = '';
+    $('runBtn').disabled = true;
+    $('runBtn').textContent = 'working...';
+    try {
+      const r = await api('/api/obfuscate', {
+        method: 'POST',
+        body: {
+          source,
+          encryptStrings:  $('optStrings').checked,
+          indirectNumbers: $('optNumbers').checked,
+          renameLocals:    $('optRename').checked,
+          stripComments:   $('optComments').checked,
+        }
+      });
+      $('out').value = r.output;
+      $('mOut').textContent = r.stats.outputBytes + 'b';
+      $('mStr').textContent = String(r.stats.strings);
+      $('mNum').textContent = String(r.stats.numbers);
+      $('statsLine').textContent =
+        `${r.stats.sourceBytes}b in → ${r.stats.outputBytes}b out · ` +
+        `${r.stats.strings} string${r.stats.strings === 1 ? '' : 's'}, ` +
+        `${r.stats.numbers} number${r.stats.numbers === 1 ? '' : 's'} indirected · ` +
+        `locals ${r.stats.renamedLocals ? 'renamed' : 'kept'}`;
+      $('copyBtn').disabled = false;
+      $('downloadBtn').disabled = false;
+      toast('obfuscated');
+    } catch (e) {
+      $('errLine').textContent = e.message || 'failed';
+      $('out').value = '';
+      $('copyBtn').disabled = true;
+      $('downloadBtn').disabled = true;
+    } finally {
+      $('runBtn').disabled = false;
+      $('runBtn').textContent = 'obfuscate →';
+    }
+  }
+</script>
+<style>
+  .obf-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 22px;
+  }
+  @media (max-width: 1000px) {
+    .obf-grid { grid-template-columns: 1fr; }
+  }
+  #src, #out {
+    font-family: var(--f-mono);
+    font-size: 12.5px;
+    line-height: 1.55;
+    min-height: 420px;
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    padding: 16px 18px;
+    border-radius: var(--r-soft);
+    width: 100%;
+    word-break: break-all;
+    white-space: pre-wrap;
+  }
+  #out { color: var(--ink-dim); }
+  #src:focus, #out:focus { border-color: var(--ink-dim); border-bottom-color: var(--ink-dim); }
+  .chip input[type="checkbox"] {
+    accent-color: var(--ink);
+    width: 13px; height: 13px;
+  }
+  @media (max-width: 720px) {
+    #src, #out { min-height: 260px; font-size: 12px; }
+  }
+</style>
+</body>
+</html>

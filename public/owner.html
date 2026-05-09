@@ -105,6 +105,26 @@
     </div>
   </div>
 </section>
+
+<section class="container-wide" style="padding-top: 0;">
+  <div class="panel-flush">
+    <span class="label">user registry</span>
+    <h2 style="margin-top: 8px;">all users</h2>
+    <p class="muted" style="margin-top: 10px;">promote a user to <strong>morph</strong> to give them the <a href="/morphs" style="color: var(--ink); text-decoration: underline;">morphs page</a>. devs and owners get morph access automatically.</p>
+
+    <div class="row-between" style="margin: 20px 0 14px; gap: 14px;">
+      <input id="userSearch" placeholder="filter users..." style="max-width: 360px;" />
+      <span id="userCount" class="muted" style="font-size: 12px;"></span>
+    </div>
+
+    <div class="table-wrap" style="max-height: 520px; overflow: auto; border: 1px solid var(--line);">
+      <table>
+        <thead><tr><th>username</th><th>role</th><th>created</th><th>via key</th><th></th></tr></thead>
+        <tbody id="usersBody"><tr><td colspan="5" class="muted">loading...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</section>
 <script>mountFooter();</script>
 <script>
   let me = null;
@@ -113,8 +133,73 @@
     me = await requireSession('dev');
     if (!me) return;
     if (!me.isOwner) { window.location.href = '/dashboard'; return; }
-    await Promise.all([loadKeys(), loadDevs(), loadAudit()]);
+    document.getElementById('userSearch').addEventListener('input', renderUsers);
+    await Promise.all([loadKeys(), loadDevs(), loadUsers(), loadAudit()]);
   })();
+
+  let allUsers = [];
+  async function loadUsers() {
+    try {
+      const { users } = await api('/api/users');
+      allUsers = users || [];
+      renderUsers();
+    } catch { document.getElementById('usersBody').innerHTML = `<tr><td colspan="5" class="muted">failed to load users</td></tr>`; }
+  }
+
+  function renderUsers() {
+    const tbody = document.getElementById('usersBody');
+    const q = document.getElementById('userSearch').value.trim().toLowerCase();
+    const list = q
+      ? allUsers.filter(u => u.username.toLowerCase().includes(q) || (u.keyUsed||'').toLowerCase().includes(q))
+      : allUsers;
+    document.getElementById('userCount').textContent = q
+      ? `${list.length} of ${allUsers.length} match`
+      : `${allUsers.length} ${allUsers.length === 1 ? 'user' : 'users'}`;
+    if (!list.length) {
+      tbody.innerHTML = `<tr><td colspan="5" class="muted">${allUsers.length ? 'no users match.' : 'no users yet.'}</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = list.map(u => {
+      const role = u.isMorph
+        ? '<span class="chip live">morph</span>'
+        : '<span class="chip">user</span>';
+      const action = u.isMorph
+        ? `<button class="btn-ghost" data-demote-morph="${escapeHtml(u.username)}">demote</button>`
+        : `<button class="btn-ghost" data-promote-morph="${escapeHtml(u.username)}">make morph</button>`;
+      return `
+        <tr>
+          <td><strong>${escapeHtml(u.username)}</strong></td>
+          <td>${role}</td>
+          <td title="${escapeHtml(u.createdAt || '')}">${u.createdAt ? new Date(u.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</td>
+          <td class="muted" style="font-size: 11px; font-family: var(--f-mono);">${u.keyUsed ? escapeHtml(u.keyUsed) : '—'}</td>
+          <td class="actions">${action}</td>
+        </tr>`;
+    }).join('');
+    tbody.querySelectorAll('[data-promote-morph]').forEach(b => {
+      b.addEventListener('click', () => promoteMorph(b.dataset.promoteMorph));
+    });
+    tbody.querySelectorAll('[data-demote-morph]').forEach(b => {
+      b.addEventListener('click', () => demoteMorph(b.dataset.demoteMorph));
+    });
+  }
+
+  async function promoteMorph(username) {
+    if (!confirm(`give "${username}" access to the morphs page?`)) return;
+    try {
+      await api('/api/users/' + encodeURIComponent(username) + '/promote-morph', { method: 'POST' });
+      toast(`${username} promoted to morph`);
+      await loadUsers();
+    } catch (e) { toast(e.message || 'failed'); }
+  }
+
+  async function demoteMorph(username) {
+    if (!confirm(`revoke "${username}"'s morph access?`)) return;
+    try {
+      await api('/api/users/' + encodeURIComponent(username) + '/demote-morph', { method: 'POST' });
+      toast(`${username} demoted`);
+      await loadUsers();
+    } catch (e) { toast(e.message || 'failed'); }
+  }
 
   async function loadAudit() {
     try {

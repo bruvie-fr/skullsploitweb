@@ -85,11 +85,14 @@
     document.getElementById('pCount').textContent = game.totalPlayers.toLocaleString();
     document.getElementById('bk').textContent = game.live ? (game.bucket || '—') : 'offline';
 
+    // Defense in depth: only set href for URLs that start with http(s):// to
+    // block any javascript:/data: schemes if the API ever returns one.
+    const safeUrl = (u) => (typeof u === 'string' && /^https?:\/\//i.test(u)) ? u : '#';
     const link = document.getElementById('pageLink');
-    if (game.pageUrl) { link.href = game.pageUrl; link.style.display = ''; }
+    if (game.pageUrl) { link.href = safeUrl(game.pageUrl); link.style.display = ''; }
     const tryBtn = document.getElementById('tryJoinBtn');
     if (game.tryJoinUrl) {
-      tryBtn.href = game.tryJoinUrl;
+      tryBtn.href = safeUrl(game.tryJoinUrl);
       tryBtn.style.display = '';
       tryBtn.textContent = game.live ? 'try any server →' : 'try joining anyway →';
     }

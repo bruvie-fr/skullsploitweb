@@ -58,13 +58,18 @@
       { href: '/scripts',   label: 'Scripts' }
     ];
     if (me && me.kind === 'dev') {
-      links.push({ href: '/dev',    label: 'Developer' });
-      links.push({ href: '/drops',  label: 'Drops' });
-      links.push({ href: '/logs',   label: 'Logs' });
-      if (me.isOwner) {
-        links.push({ href: '/owner', label: 'Owner' });
-        links.push({ href: '/audit', label: 'Audit' });
-      }
+      links.push({ href: '/dev',       label: 'Developer' });
+      links.push({ href: '/drops',     label: 'Drops' });
+      links.push({ href: '/obfuscate', label: 'Obfuscate' });
+      links.push({ href: '/logs',      label: 'Logs' });
+    }
+    // Morphs page: any dev/owner OR a regular user promoted to "morph" role.
+    if (me && me.isMorph) {
+      links.push({ href: '/morphs', label: 'Morphs' });
+    }
+    if (me && me.kind === 'dev' && me.isOwner) {
+      links.push({ href: '/owner', label: 'Owner' });
+      links.push({ href: '/audit', label: 'Audit' });
     }
 
     const linkHtml = links.map(l => `<li><a href="${l.href}" class="${l.href === active ? 'active' : ''}">${l.label}</a></li>`).join('');

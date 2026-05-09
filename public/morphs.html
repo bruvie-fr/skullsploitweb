@@ -1,0 +1,548 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>morphs · skullsploit</title>
+<link rel="icon" type="image/png" href="/img/skull.png" />
+<link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+<script src="/js/common.js"></script>
+<script>mountNav('/morphs');</script>
+<section class="hero" style="padding-top: clamp(60px,8vw,100px); padding-bottom: clamp(36px,5vw,56px);">
+  <div class="hero-grid">
+    <div>
+      <span class="label reveal reveal-1">tools / standalone</span>
+      <h1 class="reveal reveal-2" style="margin-top: 14px; font-size: clamp(48px,11vw,140px);">morphs<span class="cursor"></span></h1>
+      <p class="reveal reveal-3 lead" style="max-width: 560px; margin-top: 22px;">
+        whitelist + loader for the standalone morph GUI. add a roblox username, share the loader URL, they paste it into their executor and the GUI fetches the morph list from here. usage gets logged.
+      </p>
+      <p class="reveal reveal-3 lead" style="max-width: 560px; margin-top: 10px; font-size: 13px; color: var(--ink-faint);">
+        not gated by skullsploit keys. this is a separate tool. only the whitelist below decides who can use it.
+      </p>
+    </div>
+    <aside class="hero-meta reveal reveal-4">
+      <div><span class="k">whitelisted</span><span class="v" id="mWl">—</span></div>
+      <div><span class="k">morphs</span><span class="v" id="mTotal">—</span></div>
+      <div><span class="k">uses 24h</span><span class="v" id="mUses">—</span></div>
+    </aside>
+  </div>
+</section>
+
+<section class="container-wide" style="padding-top: 0;">
+  <div class="section-head"><h2>loader</h2><span class="label">share with whitelisted users →</span></div>
+  <div class="panel">
+    <p class="muted" style="font-size: 13px; margin-bottom: 12px;">replace <span class="kbd">username</span> with the player's roblox name:</p>
+    <pre id="requireSnippet" class="code-block">require(107971338190822)("username")</pre>
+    <button class="btn-ghost" id="copyRequireBtn" style="margin-top: 12px;">copy</button>
+  </div>
+</section>
+
+<section class="container-wide" style="padding-top: 0;">
+  <div class="section-head"><h2>custom morphs</h2><span class="label" id="cmCount">—</span></div>
+  <p class="muted" style="font-size: 13px; margin-bottom: 18px;">
+    add your own require scripts. they show up in the in-game GUI alongside the built-in morphs.
+    use the literal token <span class="kbd">USERNAME</span> in args for the player's roblox name —
+    it gets substituted at fire time. example: for <span class="kbd">require(123).load(USERNAME)</span>
+    set style=<em>args</em>, method=<em>load</em>, args=<em>USERNAME</em>.
+  </p>
+
+  <div class="panel" style="margin-bottom: 24px;">
+    <div class="form-row">
+      <div class="field">
+        <span class="label">name</span>
+        <input id="cmName" placeholder="display label" maxlength="40" />
+      </div>
+      <div class="field">
+        <span class="label">asset id</span>
+        <input id="cmId" inputmode="numeric" placeholder="e.g. 9635947635" />
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="field">
+        <span class="label">style</span>
+        <select id="cmStyle">
+          <option value="args">args · require(id).method(args...)</option>
+          <option value="colon">colon · require(id):method(args...)</option>
+          <option value="call">call · require(id)(args...)</option>
+          <option value="model">model · require(id) (no call)</option>
+        </select>
+      </div>
+      <div class="field">
+        <span class="label">method <span class="muted" style="font-size: 11px; letter-spacing: 0;">(args/colon only)</span></span>
+        <input id="cmMethod" placeholder="e.g. load, MorphMonster, Init" maxlength="40" />
+      </div>
+    </div>
+    <div class="field">
+      <span class="label">args <span class="muted" style="font-size: 11px; letter-spacing: 0;">(one per line · use <span class="kbd">USERNAME</span> for player name)</span></span>
+      <textarea id="cmArgs" placeholder="USERNAME" style="min-height: 70px;"></textarea>
+    </div>
+    <div class="row" style="gap: 10px; align-items: center;">
+      <button class="btn-solid" id="cmAddBtn">add custom morph →</button>
+      <span id="cmErr" class="muted" style="font-size: 12px;"></span>
+      <span id="cmPreview" class="muted" style="font-size: 12px; font-family: var(--f-mono);"></span>
+    </div>
+  </div>
+
+  <div class="row-between" style="margin-bottom: 14px; gap: 14px; flex-wrap: wrap;">
+    <input id="cmSearch" placeholder="filter by name, asset id, or arg..." style="max-width: 420px;" />
+    <span id="cmFiltered" class="muted" style="font-size: 12px;"></span>
+  </div>
+  <div class="table-wrap" style="border: 1px solid var(--line); margin-bottom: 36px;">
+    <table>
+      <thead><tr><th>name</th><th>asset id</th><th>call</th><th>updated</th><th>by</th><th></th></tr></thead>
+      <tbody id="cmBody"><tr><td colspan="6" class="muted">loading...</td></tr></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- edit modal -->
+<div class="modal-backdrop" id="editModal">
+  <div class="modal" style="max-width: 640px;">
+    <button class="modal-close" id="editClose">close</button>
+    <h2 style="margin-bottom: 4px;">edit custom morph</h2>
+    <p class="muted" style="font-size: 13px; margin-bottom: 18px;">renaming is allowed. <span class="kbd">USERNAME</span> still works in args.</p>
+    <div class="form-row">
+      <div class="field">
+        <span class="label">name</span>
+        <input id="emName" maxlength="40" />
+      </div>
+      <div class="field">
+        <span class="label">asset id</span>
+        <input id="emId" inputmode="numeric" />
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="field">
+        <span class="label">style</span>
+        <select id="emStyle">
+          <option value="args">args · require(id).method(args...)</option>
+          <option value="colon">colon · require(id):method(args...)</option>
+          <option value="call">call · require(id)(args...)</option>
+          <option value="model">model · require(id) (no call)</option>
+        </select>
+      </div>
+      <div class="field">
+        <span class="label">method <span class="muted" style="font-size: 11px; letter-spacing: 0;">(args/colon only)</span></span>
+        <input id="emMethod" maxlength="40" />
+      </div>
+    </div>
+    <div class="field">
+      <span class="label">args <span class="muted" style="font-size: 11px; letter-spacing: 0;">(one per line · use <span class="kbd">USERNAME</span> for player name)</span></span>
+      <textarea id="emArgs" style="min-height: 70px;"></textarea>
+    </div>
+    <div class="row" style="gap: 10px; align-items: center; margin-top: 12px;">
+      <button class="btn-solid" id="emSaveBtn">save changes →</button>
+      <button class="btn-ghost" id="emCancelBtn">cancel</button>
+      <span id="emErr" class="muted" style="font-size: 12px;"></span>
+      <span id="emPreview" class="muted" style="font-size: 12px; font-family: var(--f-mono);"></span>
+    </div>
+  </div>
+</div>
+
+<section class="container-wide" style="padding-top: 0;">
+  <div class="section-head"><h2>whitelist</h2><span class="label" id="wlCount">—</span></div>
+
+  <div class="panel" style="margin-bottom: 24px;">
+    <div class="form-row">
+      <div class="field">
+        <span class="label">roblox username</span>
+        <input id="newUser" placeholder="3-20 chars · A-Z 0-9 _" maxlength="20" />
+      </div>
+      <div class="field">
+        <span class="label">expires (days, optional)</span>
+        <input id="newDays" type="number" min="1" max="365" placeholder="leave empty for forever" />
+      </div>
+    </div>
+    <div class="field">
+      <span class="label">note (optional)</span>
+      <input id="newNote" placeholder="e.g. paid 5/9, friend of bruvo" maxlength="200" />
+    </div>
+    <div class="row" style="gap: 10px;">
+      <button class="btn-solid" id="addBtn">add to whitelist →</button>
+      <span id="addErr" class="muted" style="font-size: 12px;"></span>
+    </div>
+  </div>
+
+  <div class="table-wrap" style="border: 1px solid var(--line);">
+    <table>
+      <thead><tr><th>username</th><th>added</th><th>by</th><th>expires</th><th>note</th><th></th></tr></thead>
+      <tbody id="wlBody"><tr><td colspan="6" class="muted">loading...</td></tr></tbody>
+    </table>
+  </div>
+</section>
+
+<section class="container-wide" style="padding-top: 0;">
+  <div class="section-head"><h2>recent uses</h2><span class="label" id="logCount">—</span></div>
+  <div class="row-between" style="margin-bottom: 14px; gap: 14px;">
+    <input id="logSearch" placeholder="filter by user or morph..." style="max-width: 360px;" />
+    <button class="btn-ghost" id="refreshBtn">refresh</button>
+  </div>
+  <div class="table-wrap" style="border: 1px solid var(--line);">
+    <table>
+      <thead><tr><th>when</th><th>user</th><th>morph</th><th>place</th><th>ip</th></tr></thead>
+      <tbody id="logBody"><tr><td colspan="5" class="muted">loading...</td></tr></tbody>
+    </table>
+  </div>
+</section>
+
+<script>mountFooter();</script>
+<script>
+  const $ = (id) => document.getElementById(id);
+  let wl = [];
+  let logs = [];
+
+  (async () => {
+    const me = await requireSession();
+    if (!me) return;
+    if (!me.isMorph) { window.location.href = '/dashboard'; return; }
+
+    $('copyRequireBtn').addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText('require(107971338190822)("username")'); toast('copied'); }
+      catch { toast('copy failed — select the snippet manually'); }
+    });
+
+    $('addBtn').addEventListener('click', addUser);
+    $('newUser').addEventListener('keydown', e => { if (e.key === 'Enter') addUser(); });
+    $('refreshBtn').addEventListener('click', () => { loadAll(); toast('refreshed'); });
+    $('logSearch').addEventListener('input', renderLogs);
+    $('cmAddBtn').addEventListener('click', addCustom);
+    ['cmName','cmId','cmStyle','cmMethod','cmArgs'].forEach(id => {
+      $(id).addEventListener('input', updateCustomPreview);
+      $(id).addEventListener('change', updateCustomPreview);
+    });
+    updateCustomPreview();
+    $('cmSearch').addEventListener('input', renderCustom);
+
+    // edit modal events
+    $('emSaveBtn').addEventListener('click', saveEdit);
+    $('emCancelBtn').addEventListener('click', closeEdit);
+    $('editClose').addEventListener('click', closeEdit);
+    $('editModal').addEventListener('click', (e) => { if (e.target === $('editModal')) closeEdit(); });
+    ['emName','emId','emStyle','emMethod','emArgs'].forEach(id => {
+      $(id).addEventListener('input', updateEditPreview);
+      $(id).addEventListener('change', updateEditPreview);
+    });
+
+    await loadAll();
+    setInterval(loadAll, 30000);
+  })();
+
+  async function loadAll() {
+    await Promise.all([loadWhitelist(), loadMorphsCount(), loadLogs(), loadCustom()]);
+  }
+
+  // ----- custom morphs -----
+  let customs = {};
+
+  async function loadCustom() {
+    try {
+      const r = await api('/api/morphs/custom');
+      customs = r.entries || {};
+      const n = Object.keys(customs).length;
+      $('cmCount').textContent = n + (n === 1 ? ' entry' : ' entries');
+      renderCustom();
+    } catch { /* shrug */ }
+  }
+
+  function callPreview(name, id, style, method, args) {
+    const argList = args.length ? args.join(', ') : '';
+    if (style === 'args')   return `require(${id||'ID'}).${method||'METHOD'}(${argList})`;
+    if (style === 'colon')  return `require(${id||'ID'}):${method||'METHOD'}(${argList})`;
+    if (style === 'call')   return `require(${id||'ID'})(${argList})`;
+    return `require(${id||'ID'})`;
+  }
+
+  function parseArgsField() {
+    return $('cmArgs').value
+      .split('\n')
+      .map(l => l.trim())
+      .filter(l => l.length > 0)
+      .map(l => {
+        if (l === 'USERNAME') return l;
+        if (l === 'true' || l === 'false') return l === 'true';
+        if (/^-?\d+(\.\d+)?$/.test(l)) return Number(l);
+        // strip wrapping quotes if user typed them
+        return l.replace(/^["'](.*)["']$/, '$1');
+      });
+  }
+
+  function updateCustomPreview() {
+    const args = parseArgsField().map(a => typeof a === 'string' ? (a === 'USERNAME' ? 'USERNAME' : `"${a}"`) : String(a));
+    const preview = callPreview($('cmName').value, $('cmId').value, $('cmStyle').value, $('cmMethod').value, args);
+    $('cmPreview').textContent = preview;
+  }
+
+  function renderCustom() {
+    const tbody = $('cmBody');
+    const allNames = Object.keys(customs).sort();
+    const q = ($('cmSearch') ? $('cmSearch').value : '').trim().toLowerCase();
+    const names = q
+      ? allNames.filter(name => {
+          if (name.toLowerCase().includes(q)) return true;
+          const e = customs[name];
+          if (String(e.id).includes(q)) return true;
+          if (e.method && e.method.toLowerCase().includes(q)) return true;
+          if (Array.isArray(e.args)) {
+            for (const a of e.args) {
+              if (String(a).toLowerCase().includes(q)) return true;
+            }
+          }
+          return false;
+        })
+      : allNames;
+    const filterLbl = $('cmFiltered');
+    if (filterLbl) filterLbl.textContent = q
+      ? `${names.length} of ${allNames.length} match`
+      : `${allNames.length} ${allNames.length === 1 ? 'entry' : 'entries'}`;
+    if (!allNames.length) {
+      tbody.innerHTML = `<tr><td colspan="6" class="muted">no custom morphs yet. add one above.</td></tr>`;
+      return;
+    }
+    if (!names.length) {
+      tbody.innerHTML = `<tr><td colspan="6" class="muted">no entries match.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = names.map(name => {
+      const e = customs[name];
+      const args = (e.args || []).map(a => typeof a === 'string' ? (a === 'USERNAME' ? 'USERNAME' : `"${a}"`) : String(a));
+      const call = callPreview(name, e.id, e.style, e.method, args);
+      const stamp = e.updatedAt || e.addedAt;
+      const stampLabel = (e.updatedAt && e.updatedAt !== e.addedAt) ? 'edited' : 'added';
+      const who = e.updatedBy || e.addedBy || '—';
+      return `
+        <tr>
+          <td><strong>${escapeHtml(name)}</strong></td>
+          <td class="muted" style="font-size: 11px; font-family: var(--f-mono);">${escapeHtml(String(e.id))}</td>
+          <td><span class="kbd" style="font-size: 11px;">${escapeHtml(call)}</span></td>
+          <td title="${escapeHtml(stamp || '')}">${stamp ? stampLabel + ' ' + formatAgo(new Date(stamp)) : '—'}</td>
+          <td>${escapeHtml(who)}</td>
+          <td class="actions">
+            <button class="btn-ghost" data-cm-edit="${escapeHtml(name)}">edit</button>
+            <button class="btn-ghost" data-cm-rm="${escapeHtml(name)}">remove</button>
+          </td>
+        </tr>`;
+    }).join('');
+    tbody.querySelectorAll('[data-cm-rm]').forEach(b => {
+      b.addEventListener('click', () => removeCustom(b.dataset.cmRm));
+    });
+    tbody.querySelectorAll('[data-cm-edit]').forEach(b => {
+      b.addEventListener('click', () => openEdit(b.dataset.cmEdit));
+    });
+  }
+
+  // ----- edit modal -----
+  let editingName = null;
+
+  function openEdit(name) {
+    const e = customs[name];
+    if (!e) return;
+    editingName = name;
+    $('emName').value = name;
+    $('emId').value = String(e.id);
+    $('emStyle').value = e.style || 'args';
+    $('emMethod').value = e.method || '';
+    const args = (e.args || []).map(a => {
+      if (a === 'USERNAME') return 'USERNAME';
+      if (typeof a === 'number' || typeof a === 'boolean') return String(a);
+      return String(a);
+    });
+    $('emArgs').value = args.join('\n');
+    $('emErr').textContent = '';
+    updateEditPreview();
+    $('editModal').classList.add('open');
+  }
+
+  function closeEdit() {
+    $('editModal').classList.remove('open');
+    editingName = null;
+  }
+
+  function parseEmArgs() {
+    return $('emArgs').value
+      .split('\n').map(l => l.trim()).filter(l => l.length > 0)
+      .map(l => {
+        if (l === 'USERNAME') return l;
+        if (l === 'true' || l === 'false') return l === 'true';
+        if (/^-?\d+(\.\d+)?$/.test(l)) return Number(l);
+        return l.replace(/^["'](.*)["']$/, '$1');
+      });
+  }
+
+  function updateEditPreview() {
+    const args = parseEmArgs().map(a => typeof a === 'string' ? (a === 'USERNAME' ? 'USERNAME' : `"${a}"`) : String(a));
+    $('emPreview').textContent = callPreview($('emName').value, $('emId').value, $('emStyle').value, $('emMethod').value, args);
+  }
+
+  async function saveEdit() {
+    if (!editingName) return;
+    const newName = $('emName').value.trim();
+    const id = Number($('emId').value.replace(/\D/g, ''));
+    const style = $('emStyle').value;
+    const method = $('emMethod').value.trim();
+    const args = parseEmArgs();
+    $('emErr').textContent = '';
+    if (!newName) { $('emErr').textContent = 'name required'; return; }
+    if (!id || id <= 0) { $('emErr').textContent = 'asset id must be a positive number'; return; }
+    if ((style === 'args' || style === 'colon') && !method) {
+      $('emErr').textContent = 'method required for args/colon styles';
+      return;
+    }
+    try {
+      await api('/api/morphs/custom/' + encodeURIComponent(editingName), {
+        method: 'PATCH',
+        body: { newName, id, style, method, args }
+      });
+      toast(`updated ${newName}`);
+      closeEdit();
+      await loadCustom();
+    } catch (e) {
+      $('emErr').textContent = e.message || 'failed';
+    }
+  }
+
+  async function addCustom() {
+    const name = $('cmName').value.trim();
+    const id = Number($('cmId').value.replace(/\D/g, ''));
+    const style = $('cmStyle').value;
+    const method = $('cmMethod').value.trim();
+    const args = parseArgsField();
+    $('cmErr').textContent = '';
+    if (!name) { $('cmErr').textContent = 'name required'; return; }
+    if (!id || id <= 0) { $('cmErr').textContent = 'asset id must be a positive number'; return; }
+    if ((style === 'args' || style === 'colon') && !method) {
+      $('cmErr').textContent = 'method required for args/colon styles';
+      return;
+    }
+    try {
+      await api('/api/morphs/custom', { method: 'POST', body: { name, id, style, method, args } });
+      $('cmName').value = ''; $('cmId').value = ''; $('cmMethod').value = ''; $('cmArgs').value = '';
+      updateCustomPreview();
+      toast(`added ${name}`);
+      await loadCustom();
+      await loadMorphsCount();
+    } catch (e) { $('cmErr').textContent = e.message || 'failed'; }
+  }
+
+  async function removeCustom(name) {
+    if (!confirm(`remove "${name}"?`)) return;
+    try {
+      await api('/api/morphs/custom/' + encodeURIComponent(name), { method: 'DELETE' });
+      toast(`removed ${name}`);
+      await loadCustom();
+      await loadMorphsCount();
+    } catch (e) { toast(e.message || 'failed'); }
+  }
+
+  async function loadWhitelist() {
+    try {
+      const r = await api('/api/morphs/whitelist');
+      wl = r.entries || [];
+      $('mWl').textContent = String(wl.length);
+      $('wlCount').textContent = `${wl.length} ${wl.length === 1 ? 'entry' : 'entries'}`;
+      renderWhitelist();
+    } catch { toast('failed to load whitelist'); }
+  }
+
+  async function loadMorphsCount() {
+    try {
+      const r = await api('/api/morphs');
+      $('mTotal').textContent = String(Object.keys(r.morphs || {}).length);
+    } catch {}
+  }
+
+  async function loadLogs() {
+    try {
+      const r = await api('/api/morphs/log?limit=500');
+      logs = r.logs || [];
+      const cutoff = Date.now() - 86400000;
+      const recent = logs.filter(l => new Date(l.at).getTime() > cutoff);
+      $('mUses').textContent = String(recent.length);
+      $('logCount').textContent = `${logs.length} total · ${recent.length} in last 24h`;
+      renderLogs();
+    } catch { toast('failed to load logs'); }
+  }
+
+  function renderWhitelist() {
+    const tbody = $('wlBody');
+    if (!wl.length) {
+      tbody.innerHTML = `<tr><td colspan="6" class="muted">nobody whitelisted yet. add a roblox username above.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = wl.map(e => {
+      const expired = e.expires && new Date(e.expires).getTime() < Date.now();
+      const expChip = e.expires
+        ? `<span class="chip ${expired ? 'dead' : ''}" title="${escapeHtml(e.expires)}">${expired ? 'expired' : 'in ' + timeUntil(e.expires)}</span>`
+        : `<span class="muted">forever</span>`;
+      return `
+        <tr ${expired ? 'style="opacity:0.6"' : ''}>
+          <td><strong>${escapeHtml(e.username)}</strong></td>
+          <td title="${escapeHtml(e.addedAt || '')}">${e.addedAt ? formatAgo(new Date(e.addedAt)) : '—'}</td>
+          <td>${escapeHtml(e.addedBy || '—')}</td>
+          <td>${expChip}</td>
+          <td>${e.note ? escapeHtml(e.note) : '<span class="muted">—</span>'}</td>
+          <td class="actions"><button class="btn-ghost" data-rm="${escapeHtml(e.username)}">remove</button></td>
+        </tr>`;
+    }).join('');
+    tbody.querySelectorAll('[data-rm]').forEach(b => {
+      b.addEventListener('click', () => removeUser(b.dataset.rm));
+    });
+  }
+
+  function renderLogs() {
+    const q = $('logSearch').value.trim().toLowerCase();
+    const list = q
+      ? logs.filter(l => (l.username||'').toLowerCase().includes(q) || (l.morph||'').toLowerCase().includes(q))
+      : logs;
+    const tbody = $('logBody');
+    if (!list.length) {
+      tbody.innerHTML = `<tr><td colspan="5" class="muted">${logs.length ? 'no entries match.' : 'no morph uses logged yet.'}</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = list.slice(0, 200).map(l => `
+      <tr>
+        <td title="${escapeHtml(l.at)}">${formatAgo(new Date(l.at))}</td>
+        <td><strong>${escapeHtml(l.username || '—')}</strong></td>
+        <td><span class="kbd" style="font-size: 11px;">${escapeHtml(l.morph || '—')}</span></td>
+        <td class="muted">${l.placeId ? escapeHtml(l.placeId) : '—'}</td>
+        <td class="muted" style="font-size: 11px; font-family: var(--f-mono);">${escapeHtml(l.ip || '—')}</td>
+      </tr>`).join('');
+  }
+
+  async function addUser() {
+    const username = $('newUser').value.trim();
+    const note = $('newNote').value.trim();
+    const days = $('newDays').value ? Number($('newDays').value) : null;
+    $('addErr').textContent = '';
+    if (!/^[A-Za-z0-9_]{3,20}$/.test(username)) {
+      $('addErr').textContent = '3-20 chars, letters/numbers/underscore only';
+      return;
+    }
+    try {
+      await api('/api/morphs/whitelist', { method: 'POST', body: { username, note, days } });
+      $('newUser').value = ''; $('newNote').value = ''; $('newDays').value = '';
+      toast(`whitelisted ${username}`);
+      await loadWhitelist();
+    } catch (e) { $('addErr').textContent = e.message || 'failed'; }
+  }
+
+  async function removeUser(username) {
+    if (!confirm(`remove ${username} from the whitelist?`)) return;
+    try {
+      await api('/api/morphs/whitelist/' + encodeURIComponent(username), { method: 'DELETE' });
+      toast(`removed ${username}`);
+      await loadWhitelist();
+    } catch (e) { toast(e.message || 'failed'); }
+  }
+
+  function formatAgo(d) {
+    const s = Math.floor((Date.now() - d.getTime()) / 1000);
+    if (s < 60) return s + 's ago';
+    if (s < 3600) return Math.floor(s / 60) + 'm ago';
+    if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+    return Math.floor(s / 86400) + 'd ago';
+  }
+</script>
+</body>
+</html>

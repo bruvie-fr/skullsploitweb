@@ -534,3 +534,49 @@ td.actions { text-align: right; white-space: nowrap; }
   min-height: 16px;
   margin-top: 16px;
 }
+
+/* ----- mobile polish ----- */
+@media (max-width: 720px) {
+  html, body { font-size: 14px; }
+  .hero { padding: 48px var(--pad-sm) 32px; }
+  .hero-meta { flex-direction: row; flex-wrap: wrap; gap: 12px 22px; }
+  .hero-meta div { flex: 1 1 calc(50% - 22px); border-top: 1px solid var(--line); padding-top: 8px; }
+  .nav { padding: 12px var(--pad-sm); }
+  .nav-brand { font-size: 18px; }
+  .nav-brand .skull-mark { width: 22px; height: 22px; }
+  .container, .container-wide, .container-tight {
+    padding: 32px var(--pad-sm);
+  }
+  .section-head h2 { font-size: clamp(26px, 8vw, 38px); }
+  .section-head { gap: 8px; padding-bottom: 10px; margin-bottom: 18px; }
+  .panel { padding: 18px; }
+  .modal { padding: 20px; max-height: 92vh; }
+  .modal-close { top: 8px; right: 8px; }
+  th, td { padding: 10px 12px; }
+  table { font-size: 12px; }
+  .stat { padding: 16px; }
+  .stat-value { font-size: clamp(26px, 9vw, 40px); }
+  .stat-label { margin-bottom: 8px; }
+  .stat-sub { font-size: 12px; }
+  .game-card { min-height: 160px; padding: 18px; }
+  .game-card-name { font-size: clamp(20px, 6vw, 26px); }
+  .game-card-meta { font-size: 11px; }
+  .script-card { padding: 18px; gap: 14px; }
+  .script-card-actions { flex-wrap: wrap; }
+  .like { padding: 8px 12px; font-size: 11px; min-height: 38px; }
+  button, .btn { padding: 10px 16px; font-size: 11px; min-height: 40px; }
+  .btn-ghost { padding: 8px 12px; min-height: 36px; }
+  input, textarea, select { font-size: 16px; padding: 12px 0; } /* 16px+ prevents iOS auto-zoom */
+  textarea { min-height: 120px; font-size: 14px; }
+  .nav-drawer-links a { font-size: 32px; padding: 10px 0; }
+  .row-between { gap: 8px; }
+  .foot { padding: 20px var(--pad-sm); flex-direction: column; align-items: flex-start; gap: 6px; }
+  /* prevent long inline mono strings (place ids, hashes) blowing out width */
+  .kbd, td.code { word-break: break-all; }
+}
+
+@media (max-width: 480px) {
+  .hero h1 { word-break: break-word; }
+  .hero-meta div { flex: 1 1 100%; }
+  .stats { grid-template-columns: 1fr; }
+}
