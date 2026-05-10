@@ -18,9 +18,16 @@ const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcryptjs');
 
-const [, , username, password] = process.argv;
+// Args: username, password, optional --data <path-to-devs.json>
+let username, password, dataPath;
+for (let i = 2; i < process.argv.length; i++) {
+  const a = process.argv[i];
+  if (a === '--data' && process.argv[i + 1]) { dataPath = process.argv[++i]; }
+  else if (!username) { username = a; }
+  else if (!password) { password = a; }
+}
 if (!username || !password) {
-  console.error('usage: node scripts/set-dev-password.js <username> <new_password>');
+  console.error('usage: node scripts/set-dev-password.js <username> <new_password> [--data /abs/path/to/devs.json]');
   process.exit(1);
 }
 if (username.length > 64 || password.length < 8 || password.length > 256) {
@@ -28,11 +35,22 @@ if (username.length > 64 || password.length < 8 || password.length > 256) {
   process.exit(1);
 }
 
-const FILE = path.join(__dirname, '..', 'data', 'devs.json');
-if (!fs.existsSync(FILE)) {
-  console.error('data/devs.json missing — has the server ever been run?');
+// Search likely locations if --data wasn't given.
+const candidates = dataPath ? [dataPath] : [
+  path.join(__dirname, '..', 'data', 'devs.json'),
+  '/home/ubuntu/skullsploit/data/devs.json',
+  '/var/lib/skullsploit/devs.json',
+  '/opt/skullsploit/data/devs.json',
+];
+const FILE = candidates.find(p => fs.existsSync(p));
+if (!FILE) {
+  console.error('could not find devs.json. tried:');
+  for (const c of candidates) console.error('  ' + c);
+  console.error('pass the path explicitly:  --data /full/path/to/devs.json');
+  console.error('hint: sudo find / -name devs.json -path "*/skullsploit/*" 2>/dev/null');
   process.exit(1);
 }
+console.log('using ' + FILE);
 
 const devs = JSON.parse(fs.readFileSync(FILE, 'utf8'));
 const dev = devs.find(d => d.username === username);
