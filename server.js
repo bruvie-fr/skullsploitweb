@@ -387,13 +387,44 @@ function requireMorphAccess(req, res, next) {
   if (!hasMorphAccess(u.username)) return res.status(403).json({ error: 'morph access required' });
   next();
 }
+// Shared XOR key with the Roblox MainModule. Used to obfuscate the username
+// in ?u= so that drive-by scrapers can't just guess plaintext usernames.
+// NOT real security — anyone who can decompile the published model can
+// extract this key. The replay-window check (5 min) limits damage from a
+// captured token; the whitelist check is still the ultimate gate.
+const MORPH_USERNAME_KEY = Buffer.from(
+  '8c5eb959e260fa77680c7466f16c9ad7f7d94f19ed52dc122a9362b722e99b2f',
+  'hex'
+);
+const MORPH_REPLAY_WINDOW_MS = 5 * 60 * 1000;
+
+function decryptMorphUsername(hex) {
+  if (typeof hex !== 'string' || hex.length === 0 || hex.length > 512) return null;
+  if (!/^[0-9a-f]+$/i.test(hex) || hex.length % 2 !== 0) return null;
+  let cipher;
+  try { cipher = Buffer.from(hex, 'hex'); } catch { return null; }
+  const plain = Buffer.alloc(cipher.length);
+  for (let i = 0; i < cipher.length; i++) {
+    plain[i] = cipher[i] ^ MORPH_USERNAME_KEY[i % MORPH_USERNAME_KEY.length];
+  }
+  let text;
+  try { text = plain.toString('utf8'); } catch { return null; }
+  const idx = text.lastIndexOf(':');
+  if (idx < 0) return null;
+  const username = text.slice(0, idx);
+  const ts = parseInt(text.slice(idx + 1), 10);
+  if (!Number.isFinite(ts) || ts <= 0) return null;
+  const skew = Math.abs(Date.now() - ts * 1000);
+  if (skew > MORPH_REPLAY_WINDOW_MS) return null;
+  if (!username || username.length > 64) return null;
+  return username;
+}
+
 // Gates the public morph endpoints. Two ways to pass:
 //   1. Logged-in morph-access user via session cookie (admin UI on /morphs).
-//   2. ?u=USERNAME query param matching a whitelist entry — anyone whose
-//      Roblox username is on /morphs can fetch the morph list. The whitelist
-//      itself is the gate (you have to know a whitelisted name to scrape).
-// Combined with the morph rate limiters, this keeps drive-by scrapers out
-// without requiring per-user token distribution.
+//   2. ?u=<hex> — XOR-encrypted "username:timestamp" blob from the MainModule.
+//      Server decrypts, verifies timestamp is within the replay window, then
+//      checks the username against the morph whitelist.
 function requireMorphToken(req, res, next) {
   const sessUser = req.session && req.session.user;
   if (sessUser && hasMorphAccess(sessUser.username)) {
@@ -404,8 +435,11 @@ function requireMorphToken(req, res, next) {
   const u = String((req.query && req.query.u) || '').trim();
   if (!u) return res.status(403).json({ error: 'forbidden' });
 
+  const username = decryptMorphUsername(u);
+  if (!username) return res.status(403).json({ error: 'forbidden' });
+
   const wl = readJson(MORPH_WL_FILE, []);
-  const entry = wl.find(e => e.username.toLowerCase() === u.toLowerCase());
+  const entry = wl.find(e => e.username.toLowerCase() === username.toLowerCase());
   if (!entry) return res.status(403).json({ error: 'forbidden' });
   if (entry.expires && new Date(entry.expires).getTime() < Date.now()) {
     return res.status(403).json({ error: 'expired' });
@@ -1045,14 +1079,11 @@ app.patch('/api/morphs/custom/:name', writeLimiter, requireMorphAccess, (req, re
 });
 
 app.get('/api/morphs/check', morphCheckLimiter, requireMorphToken, (req, res) => {
-  const u = String(req.query.u || '').trim();
-  if (!u) return res.json({ ok: false });
+  // requireMorphToken already verified the encrypted ?u= AND that the resolved
+  // username is on the whitelist. If we got here, the answer is yes.
   const wl = readJson(MORPH_WL_FILE, []);
-  const entry = wl.find(e => e.username.toLowerCase() === u.toLowerCase());
-  if (!entry) return res.json({ ok: false });
-  if (entry.expires && new Date(entry.expires).getTime() < Date.now()) {
-    return res.json({ ok: false, reason: 'expired' });
-  }
+  const entry = wl.find(e => e.username.toLowerCase() === (req.morphUser || '').toLowerCase());
+  if (!entry) return res.json({ ok: true });
   res.json({ ok: true, expires: entry.expires || null, note: entry.note || '' });
 });
 
