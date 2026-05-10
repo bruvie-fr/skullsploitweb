@@ -79,7 +79,13 @@ function seed() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
   if (!fs.existsSync(DEVS_FILE)) {
     const u = process.env.SEED_DEV_USERNAME || OWNER_USERNAME;
-    const p = process.env.SEED_DEV_PASSWORD || 'Bruvofr@2011';
+    const p = process.env.SEED_DEV_PASSWORD || '';
+    if (!p) {
+      console.error('[seed] refusing to create bootstrap dev with an empty password.');
+      console.error('[seed] set SEED_DEV_PASSWORD env var (e.g. SEED_DEV_PASSWORD=...) and re-run.');
+      console.error('[seed] this is a one-time setup — rotate it from the website afterwards.');
+      process.exit(1);
+    }
     writeJson(DEVS_FILE, [{
       username: u,
       passwordHash: bcrypt.hashSync(p, 10),
@@ -464,6 +470,12 @@ app.post('/api/auth/signup', signupLimiter, (req, res) => {
   });
 });
 
+// Pre-computed bcrypt hash of a random throwaway. We bcrypt-compare against
+// this when no user is found so every login takes the same amount of time
+// regardless of whether the username exists. Closes timing-based username
+// enumeration.
+const DUMMY_PASSWORD_HASH = bcrypt.hashSync(crypto.randomBytes(24).toString('hex'), 10);
+
 app.post('/api/auth/login', loginLimiter, (req, res) => {
   const { username, password } = req.body || {};
   if (typeof username !== 'string' || typeof password !== 'string') {
@@ -479,7 +491,12 @@ app.post('/api/auth/login', loginLimiter, (req, res) => {
   let bucketFile = DEVS_FILE;
   let bucketAll = devs;
   if (!user) { user = users.find(u => u.username === username); kind = 'user'; bucketFile = USERS_FILE; bucketAll = users; }
-  if (!user || !bcrypt.compareSync(password, user.passwordHash)) {
+
+  // Always run bcrypt to keep timing constant. If the user doesn't exist we
+  // hash against a random hash that nothing will ever match.
+  const hashToCheck = user ? user.passwordHash : DUMMY_PASSWORD_HASH;
+  const passwordOk = bcrypt.compareSync(password, hashToCheck);
+  if (!user || !passwordOk) {
     audit(req, 'auth.login_failed', username, {});
     return res.status(401).json({ error: 'wrong username or password' });
   }
