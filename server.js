@@ -40,6 +40,13 @@ const OWNER_USERNAME = (process.env.OWNER_USERNAME || 'bruvo').trim();
 // leave unset to keep the endpoint open (rate-limited only).
 const HEARTBEAT_SECRET = (process.env.HEARTBEAT_SECRET || '').trim();
 
+// Shared secret that gates the public morph endpoints (/api/morphs,
+// /api/morphs/check, /api/morphs/log). When set, requests must include
+// X-MorphHub-Secret header (or ?secret= query) matching this value.
+// Logged-in users with morph access bypass the check (so the admin UI works).
+// Leave unset for fully-public morph endpoints (legacy behavior).
+const MORPH_API_SECRET = (process.env.MORPH_API_SECRET || '').trim();
+
 // auto-stale policy for the persistent places registry. places whose lastSeen is older
 // than this many days get pruned automatically. set PLACE_STALE_DAYS=0 to keep forever.
 // default: 30 days.
@@ -378,6 +385,17 @@ function requireMorphAccess(req, res, next) {
     });
   }
   if (!hasMorphAccess(u.username)) return res.status(403).json({ error: 'morph access required' });
+  next();
+}
+// Gates public morph endpoints. Pass if the env-set secret matches the header
+// or query param, OR if a logged-in morph-access user is making the request
+// (so the admin UI keeps working without needing to send the secret).
+function requireMorphSecret(req, res, next) {
+  if (!MORPH_API_SECRET) return next();
+  const sessUser = req.session && req.session.user;
+  if (sessUser && hasMorphAccess(sessUser.username)) return next();
+  const provided = req.get('X-MorphHub-Secret') || (req.query && req.query.secret) || '';
+  if (provided !== MORPH_API_SECRET) return res.status(403).json({ error: 'forbidden' });
   next();
 }
 
@@ -847,7 +865,7 @@ app.post('/api/obfuscate', writeLimiter, requireDev, (req, res) => {
 
 const ROBLOX_NAME_RE = /^[A-Za-z0-9_]{3,20}$/;
 
-app.get('/api/morphs', (req, res) => {
+app.get('/api/morphs', requireMorphSecret, (req, res) => {
   // Single source of truth: morph-custom.json. The original morphs.json is
   // a one-time seed migrated on first boot.
   res.json({ morphs: readJson(MORPH_CUSTOM_FILE, {}) });
@@ -996,7 +1014,7 @@ app.patch('/api/morphs/custom/:name', writeLimiter, requireMorphAccess, (req, re
   res.json({ ok: true, name: finalName, entry });
 });
 
-app.get('/api/morphs/check', morphCheckLimiter, (req, res) => {
+app.get('/api/morphs/check', morphCheckLimiter, requireMorphSecret, (req, res) => {
   const u = String(req.query.u || '').trim();
   if (!u) return res.json({ ok: false });
   const wl = readJson(MORPH_WL_FILE, []);
@@ -1008,7 +1026,7 @@ app.get('/api/morphs/check', morphCheckLimiter, (req, res) => {
   res.json({ ok: true, expires: entry.expires || null, note: entry.note || '' });
 });
 
-app.post('/api/morphs/log', morphLogLimiter, (req, res) => {
+app.post('/api/morphs/log', morphLogLimiter, requireMorphSecret, (req, res) => {
   const b = req.body || {};
   const username = typeof b.username === 'string' ? b.username.trim() : '';
   const morph    = typeof b.morph === 'string' ? b.morph.trim() : '';
