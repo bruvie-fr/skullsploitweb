@@ -44,6 +44,10 @@
             <span>encrypt strings</span>
           </label>
           <label class="chip" style="cursor: pointer;">
+            <input type="checkbox" id="optCalls" checked style="width: auto; margin: 0; vertical-align: middle;" />
+            <span>encrypt calls</span>
+          </label>
+          <label class="chip" style="cursor: pointer;">
             <input type="checkbox" id="optNumbers" checked style="width: auto; margin: 0; vertical-align: middle;" />
             <span>indirect numbers</span>
           </label>
@@ -144,6 +148,7 @@ end
         body: {
           source,
           encryptStrings:  $('optStrings').checked,
+          encryptCalls:    $('optCalls').checked,
           indirectNumbers: $('optNumbers').checked,
           renameLocals:    $('optRename').checked,
           stripComments:   $('optComments').checked,

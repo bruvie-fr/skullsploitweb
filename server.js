@@ -965,6 +965,7 @@ app.post('/api/obfuscate', writeLimiter, requireDev, (req, res) => {
   const b = req.body || {};
   const opts = {
     encryptStrings:  b.encryptStrings  !== false,
+    encryptCalls:    b.encryptCalls    !== false,
     indirectNumbers: b.indirectNumbers !== false,
     renameLocals:    b.renameLocals    !== false,
     stripComments:   b.stripComments   !== false,
@@ -979,6 +980,7 @@ app.post('/api/obfuscate', writeLimiter, requireDev, (req, res) => {
     strings: r.stats.strings,
     numbers: r.stats.numbers,
     encryptStrings:  !!opts.encryptStrings,
+    encryptCalls:    !!opts.encryptCalls,
     indirectNumbers: !!opts.indirectNumbers,
     renameLocals:    !!opts.renameLocals,
     stripComments:   !!opts.stripComments,
