@@ -389,14 +389,55 @@ function requireMorphAccess(req, res, next) {
 }
 // Shared XOR key with the Roblox MainModule. Used to obfuscate the username
 // in ?u= so that drive-by scrapers can't just guess plaintext usernames.
-// NOT real security — anyone who can decompile the published model can
-// extract this key. The replay-window check (5 min) limits damage from a
-// captured token; the whitelist check is still the ultimate gate.
+// NOT real security on its own — anyone who can decompile the published
+// model can extract this key. The HMAC tag below adds the actual auth.
 const MORPH_USERNAME_KEY = Buffer.from(
   '8c5eb959e260fa77680c7466f16c9ad7f7d94f19ed52dc122a9362b722e99b2f',
   'hex'
 );
+// HMAC-SHA256 key shared with MainModule. Used to sign every morph API
+// request alongside a server-issued one-time nonce. Even an attacker who
+// extracts BOTH keys must continuously fetch fresh nonces from the rate-
+// limited /api/morphs/nonce endpoint to forge requests.
+const MORPH_MAC_KEY = Buffer.from(
+  'bb9d2ccc55c3df174e693c79c41c3f6111a8606e85214783615a805532b590ee',
+  'hex'
+);
 const MORPH_REPLAY_WINDOW_MS = 5 * 60 * 1000;
+const MORPH_NONCE_TTL_MS = 60 * 1000;
+
+// In-memory one-time-use nonce store. Map<nonceHex, expiresAtMs>.
+// Pruned every 30s. On server restart, all in-flight nonces become invalid —
+// clients retry with a fresh nonce, no user-visible breakage.
+const morphNonces = new Map();
+function pruneMorphNonces() {
+  const now = Date.now();
+  for (const [n, exp] of morphNonces) if (exp < now) morphNonces.delete(n);
+}
+setInterval(pruneMorphNonces, 30 * 1000).unref();
+
+function issueMorphNonce() {
+  const n = crypto.randomBytes(32).toString('hex');
+  morphNonces.set(n, Date.now() + MORPH_NONCE_TTL_MS);
+  return n;
+}
+function consumeMorphNonce(n) {
+  if (typeof n !== 'string' || n.length !== 64 || !/^[0-9a-f]+$/i.test(n)) return false;
+  const exp = morphNonces.get(n);
+  if (!exp) return false;
+  if (exp < Date.now()) { morphNonces.delete(n); return false; }
+  morphNonces.delete(n); // one-time-use
+  return true;
+}
+function expectedMorphMac(message) {
+  return crypto.createHmac('sha256', MORPH_MAC_KEY).update(message).digest('hex');
+}
+function timingSafeHexEq(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false;
+  try {
+    return crypto.timingSafeEqual(Buffer.from(a, 'hex'), Buffer.from(b, 'hex'));
+  } catch { return false; }
+}
 
 function decryptMorphUsername(hex) {
   if (typeof hex !== 'string' || hex.length === 0 || hex.length > 512) return null;
@@ -422,9 +463,17 @@ function decryptMorphUsername(hex) {
 
 // Gates the public morph endpoints. Two ways to pass:
 //   1. Logged-in morph-access user via session cookie (admin UI on /morphs).
-//   2. ?u=<hex> — XOR-encrypted "username:timestamp" blob from the MainModule.
-//      Server decrypts, verifies timestamp is within the replay window, then
-//      checks the username against the morph whitelist.
+//   2. ?u=<hex>&n=<nonce>&t=<unixSec>&s=<hmacHex>
+//      MainModule first fetches a nonce from /api/morphs/nonce, then signs
+//      (u + ":" + n + ":" + t) with MORPH_MAC_KEY. Server consumes the nonce
+//      (one-time use) and verifies the HMAC before decrypting the username.
+//      Captured tokens can't be replayed; bit-flipped tokens fail HMAC check.
+//
+// Transition note: if the client sends `u` without `n/t/s`, we currently
+// fall through to the legacy XOR-only check. Once MainModule is republished,
+// MORPH_REQUIRE_HMAC=1 turns the strict mode on.
+const MORPH_REQUIRE_HMAC = process.env.MORPH_REQUIRE_HMAC === '1';
+
 function requireMorphToken(req, res, next) {
   const sessUser = req.session && req.session.user;
   if (sessUser && hasMorphAccess(sessUser.username)) {
@@ -434,6 +483,25 @@ function requireMorphToken(req, res, next) {
 
   const u = String((req.query && req.query.u) || '').trim();
   if (!u) return res.status(403).json({ error: 'forbidden' });
+
+  const n = String((req.query && req.query.n) || '').trim();
+  const t = String((req.query && req.query.t) || '').trim();
+  const s = String((req.query && req.query.s) || '').trim();
+  const hasSignature = n && t && s;
+
+  if (MORPH_REQUIRE_HMAC && !hasSignature) {
+    return res.status(403).json({ error: 'forbidden' });
+  }
+
+  if (hasSignature) {
+    if (!consumeMorphNonce(n)) return res.status(403).json({ error: 'forbidden' });
+    const expected = expectedMorphMac(u + ':' + n + ':' + t);
+    if (!timingSafeHexEq(expected, s)) return res.status(403).json({ error: 'forbidden' });
+    const ts = parseInt(t, 10);
+    if (!Number.isFinite(ts) || Math.abs(Date.now() - ts * 1000) > MORPH_REPLAY_WINDOW_MS) {
+      return res.status(403).json({ error: 'forbidden' });
+    }
+  }
 
   const username = decryptMorphUsername(u);
   if (!username) return res.status(403).json({ error: 'forbidden' });
@@ -926,6 +994,14 @@ app.post('/api/obfuscate', writeLimiter, requireDev, (req, res) => {
 
 const ROBLOX_NAME_RE = /^[A-Za-z0-9_]{3,20}$/;
 
+// Issues a fresh one-time-use 60-second nonce. Required for any signed
+// morph request. Rate-limited like the rest of the public morph endpoints.
+// No auth needed — a nonce alone is useless without MORPH_MAC_KEY.
+app.get('/api/morphs/nonce', morphCheckLimiter, (req, res) => {
+  const nonce = issueMorphNonce();
+  res.json({ nonce, expires: Date.now() + MORPH_NONCE_TTL_MS });
+});
+
 app.get('/api/morphs', morphCheckLimiter, requireMorphToken, (req, res) => {
   // Returns the morph list. Caller proved they're either an admin (session)
   // or someone whose Roblox username is on the whitelist (?u=).
@@ -1100,6 +1176,13 @@ app.post('/api/morphs/log', morphLogLimiter, requireMorphToken, (req, res) => {
   if (!username || !morph) return res.status(400).json({ error: 'missing username/morph' });
   if (!ROBLOX_NAME_RE.test(username)) return res.status(400).json({ error: 'invalid username' });
   if (morph.length > 80) return res.status(400).json({ error: 'morph name too long' });
+
+  // The signed identity (req.morphUser, resolved from the HMAC'd ?u= param)
+  // must match the username being logged. Otherwise anyone with a valid
+  // signature could forge log entries under a different name.
+  if (req.morphUser && username.toLowerCase() !== String(req.morphUser).toLowerCase()) {
+    return res.status(403).json({ error: 'forbidden' });
+  }
 
   // verify the actor IS whitelisted before accepting their log
   const wl = readJson(MORPH_WL_FILE, []);
