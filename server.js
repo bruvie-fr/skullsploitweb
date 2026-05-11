@@ -268,6 +268,12 @@ const writeLimiter     = rateLimit({ windowMs: 60 * 1000,      max: 60,  message
 const auditLimiter     = rateLimit({ windowMs: 60 * 1000,      max: 60,  message: 'too many requests' });
 const morphCheckLimiter= rateLimit({ windowMs: 60 * 1000,      max: 120, message: 'too many checks' });
 const morphLogLimiter  = rateLimit({ windowMs: 60 * 1000,      max: 240, message: 'too many uses logged' });
+// Tight cap on /api/morphs/entry: a legit player firing morphs hits this once
+// per unique morph (then the in-game cache covers repeats). A scraper trying
+// to pull the whole catalog (~7000 entries) would have to spend ~4 hours per
+// IP at this rate. Combined with the one-time-use nonce requirement, that
+// makes mass scraping prohibitively painful.
+const morphEntryLimiter= rateLimit({ windowMs: 60 * 1000,      max: 30,  message: 'too many morph fetches' });
 
 // ----- in-memory state -----
 const HEARTBEAT_TTL = 30 * 1000;
@@ -1005,12 +1011,36 @@ app.get('/api/morphs/nonce', morphCheckLimiter, (req, res) => {
 });
 
 app.get('/api/morphs', morphCheckLimiter, requireMorphToken, (req, res) => {
-  // Returns the morph list. Caller proved they're either an admin (session)
-  // or someone whose Roblox username is on the whitelist (?u=).
-  res.json({
-    morphs: readJson(MORPH_CUSTOM_FILE, {}),
-    username: req.morphUser || null,
-  });
+  // Returns the morph catalog. For admin (session) callers we hand back full
+  // entries because the admin UI uses /api/morphs/custom anyway; this branch
+  // is mostly a courtesy. For Roblox (HMAC) callers we strip down to NAMES
+  // ONLY — the actual `require()` id, method, style, args for any single
+  // morph is fetched just-in-time from /api/morphs/entry when the player
+  // clicks it. That changes scraping the catalog from one cheap fetch into
+  // ~7000 individually-signed, individually-nonced, rate-limited fetches.
+  const all = readJson(MORPH_CUSTOM_FILE, {});
+  const sessUser = req.session && req.session.user;
+  if (sessUser && hasMorphAccess(sessUser.username)) {
+    return res.json({ morphs: all, username: req.morphUser || null });
+  }
+  // Names-only map. Kept as an OBJECT (keyed by name) so the in-game GUI
+  // template — which iterates morphs via `pairs(...)` to render the list —
+  // doesn't need any code changes.
+  const names = {};
+  for (const k of Object.keys(all)) names[k] = 1;
+  res.json({ morphs: names, username: req.morphUser || null });
+});
+
+// Single-entry fetch. Used by MainModule's fireFor() right before calling
+// `require(N).method(args)`. The full per-morph payload is only handed out
+// one-at-a-time, gated by HMAC + nonce + a tight per-IP rate limit.
+app.get('/api/morphs/entry', morphEntryLimiter, requireMorphToken, (req, res) => {
+  const name = String((req.query && req.query.name) || '').trim();
+  if (!name || !CUSTOM_NAME_RE.test(name)) return res.status(400).json({ error: 'invalid name' });
+  const all = readJson(MORPH_CUSTOM_FILE, {});
+  const key = findCustomKey(all, name);
+  if (!key) return res.status(404).json({ error: 'not found' });
+  res.json({ entry: all[key], username: req.morphUser || null });
 });
 
 // Helper: find a custom-morph entry by case-insensitive name match.
