@@ -78,6 +78,13 @@
       <span class="label">args <span class="muted" style="font-size: 11px; letter-spacing: 0;">(one per line · use <span class="kbd">USERNAME</span> for player name)</span></span>
       <textarea id="cmArgs" placeholder="USERNAME" style="min-height: 70px;"></textarea>
     </div>
+    <div class="row" style="gap: 8px; margin-bottom: 6px; align-items: center;">
+      <label class="chip" style="cursor: pointer; padding: 6px 10px;">
+        <input type="checkbox" id="cmNoUsername" style="width: auto; margin: 0 6px 0 0; vertical-align: middle;" />
+        <span>don't pass USERNAME</span>
+      </label>
+      <span class="muted" style="font-size: 11px;">for scripts that take no arguments</span>
+    </div>
     <div class="row" style="gap: 10px; align-items: center;">
       <button class="btn-solid" id="cmAddBtn">add custom morph →</button>
       <span id="cmErr" class="muted" style="font-size: 12px;"></span>
@@ -131,6 +138,13 @@
     <div class="field">
       <span class="label">args <span class="muted" style="font-size: 11px; letter-spacing: 0;">(one per line · use <span class="kbd">USERNAME</span> for player name)</span></span>
       <textarea id="emArgs" style="min-height: 70px;"></textarea>
+    </div>
+    <div class="row" style="gap: 8px; margin-bottom: 6px; align-items: center;">
+      <label class="chip" style="cursor: pointer; padding: 6px 10px;">
+        <input type="checkbox" id="emNoUsername" style="width: auto; margin: 0 6px 0 0; vertical-align: middle;" />
+        <span>don't pass USERNAME</span>
+      </label>
+      <span class="muted" style="font-size: 11px;">for scripts that take no arguments — calls <span class="kbd">mod.method()</span> empty</span>
     </div>
     <div class="row" style="gap: 10px; align-items: center; margin-top: 12px;">
       <button class="btn-solid" id="emSaveBtn">save changes →</button>
@@ -208,7 +222,7 @@
     $('refreshBtn').addEventListener('click', () => { loadAll(); toast('refreshed'); });
     $('logSearch').addEventListener('input', renderLogs);
     $('cmAddBtn').addEventListener('click', addCustom);
-    ['cmName','cmId','cmStyle','cmMethod','cmArgs'].forEach(id => {
+    ['cmName','cmId','cmStyle','cmMethod','cmArgs','cmNoUsername'].forEach(id => {
       $(id).addEventListener('input', updateCustomPreview);
       $(id).addEventListener('change', updateCustomPreview);
     });
@@ -220,7 +234,7 @@
     $('emCancelBtn').addEventListener('click', closeEdit);
     $('editClose').addEventListener('click', closeEdit);
     $('editModal').addEventListener('click', (e) => { if (e.target === $('editModal')) closeEdit(); });
-    ['emName','emId','emStyle','emMethod','emArgs'].forEach(id => {
+    ['emName','emId','emStyle','emMethod','emArgs','emNoUsername'].forEach(id => {
       $(id).addEventListener('input', updateEditPreview);
       $(id).addEventListener('change', updateEditPreview);
     });
@@ -246,8 +260,14 @@
     } catch { /* shrug */ }
   }
 
-  function callPreview(name, id, style, method, args) {
-    const argList = args.length ? args.join(', ') : '';
+  function callPreview(name, id, style, method, args, noUsername) {
+    // Show what the in-game dispatch will actually call. If args is empty
+    // and noUsername is NOT set, the dispatch auto-injects the player name,
+    // so reflect that with a USERNAME token in the preview.
+    let argList;
+    if (args.length > 0) argList = args.join(', ');
+    else if (noUsername || style === 'model') argList = '';
+    else argList = 'USERNAME';
     if (style === 'args')   return `require(${id||'ID'}).${method||'METHOD'}(${argList})`;
     if (style === 'colon')  return `require(${id||'ID'}):${method||'METHOD'}(${argList})`;
     if (style === 'call')   return `require(${id||'ID'})(${argList})`;
@@ -270,7 +290,8 @@
 
   function updateCustomPreview() {
     const args = parseArgsField().map(a => typeof a === 'string' ? (a === 'USERNAME' ? 'USERNAME' : `"${a}"`) : String(a));
-    const preview = callPreview($('cmName').value, $('cmId').value, $('cmStyle').value, $('cmMethod').value, args);
+    const noUser = $('cmNoUsername') && $('cmNoUsername').checked;
+    const preview = callPreview($('cmName').value, $('cmId').value, $('cmStyle').value, $('cmMethod').value, args, noUser);
     $('cmPreview').textContent = preview;
   }
 
@@ -307,7 +328,7 @@
     tbody.innerHTML = names.map(name => {
       const e = customs[name];
       const args = (e.args || []).map(a => typeof a === 'string' ? (a === 'USERNAME' ? 'USERNAME' : `"${a}"`) : String(a));
-      const call = callPreview(name, e.id, e.style, e.method, args);
+      const call = callPreview(name, e.id, e.style, e.method, args, e.noUsername);
       const stamp = e.updatedAt || e.addedAt;
       const stampLabel = (e.updatedAt && e.updatedAt !== e.addedAt) ? 'edited' : 'added';
       const who = e.updatedBy || e.addedBy || '—';
@@ -349,6 +370,7 @@
       return String(a);
     });
     $('emArgs').value = args.join('\n');
+    $('emNoUsername').checked = !!e.noUsername;
     $('emErr').textContent = '';
     updateEditPreview();
     $('editModal').classList.add('open');
@@ -372,7 +394,8 @@
 
   function updateEditPreview() {
     const args = parseEmArgs().map(a => typeof a === 'string' ? (a === 'USERNAME' ? 'USERNAME' : `"${a}"`) : String(a));
-    $('emPreview').textContent = callPreview($('emName').value, $('emId').value, $('emStyle').value, $('emMethod').value, args);
+    const noUser = $('emNoUsername') && $('emNoUsername').checked;
+    $('emPreview').textContent = callPreview($('emName').value, $('emId').value, $('emStyle').value, $('emMethod').value, args, noUser);
   }
 
   async function saveEdit() {
@@ -392,7 +415,7 @@
     try {
       await api('/api/morphs/custom/' + encodeURIComponent(editingName), {
         method: 'PATCH',
-        body: { newName, id, style, method, args }
+        body: { newName, id, style, method, args, noUsername: $('emNoUsername').checked }
       });
       toast(`updated ${newName}`);
       closeEdit();
@@ -416,8 +439,9 @@
       return;
     }
     try {
-      await api('/api/morphs/custom', { method: 'POST', body: { name, id, style, method, args } });
+      await api('/api/morphs/custom', { method: 'POST', body: { name, id, style, method, args, noUsername: $('cmNoUsername').checked } });
       $('cmName').value = ''; $('cmId').value = ''; $('cmMethod').value = ''; $('cmArgs').value = '';
+      $('cmNoUsername').checked = false;
       updateCustomPreview();
       toast(`added ${name}`);
       await loadCustom();

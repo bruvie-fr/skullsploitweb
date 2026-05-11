@@ -985,12 +985,13 @@ app.post('/api/morphs/custom', writeLimiter, requireMorphAccess, (req, res) => {
   const entry = { id, style };
   if (method) entry.method = method;
   if (args)   entry.args   = args;
+  if (b.noUsername === true) entry.noUsername = true;
   entry.addedBy = req.session.user.username;
   entry.addedAt = new Date().toISOString();
 
   all[name] = entry;
   writeJson(MORPH_CUSTOM_FILE, all);
-  audit(req, 'morph.custom.added', name, { id, style, method, args });
+  audit(req, 'morph.custom.added', name, { id, style, method, args, noUsername: !!entry.noUsername });
   res.json({ ok: true, name, entry });
 });
 
@@ -1043,6 +1044,10 @@ app.patch('/api/morphs/custom/:name', writeLimiter, requireMorphAccess, (req, re
     if (args) entry.args = args;
     else delete entry.args;
   }
+  if (b.noUsername !== undefined) {
+    if (b.noUsername === true) entry.noUsername = true;
+    else delete entry.noUsername;
+  }
   // Final shape sanity: args/colon styles still need a method
   if ((entry.style === 'args' || entry.style === 'colon') && !entry.method) {
     return res.status(400).json({ error: 'method required for args/colon styles' });
@@ -1073,7 +1078,8 @@ app.patch('/api/morphs/custom/:name', writeLimiter, requireMorphAccess, (req, re
   writeJson(MORPH_CUSTOM_FILE, all);
   audit(req, 'morph.custom.updated', key, {
     renamedTo: finalName !== key ? finalName : undefined,
-    id: entry.id, style: entry.style, method: entry.method, args: entry.args
+    id: entry.id, style: entry.style, method: entry.method, args: entry.args,
+    noUsername: !!entry.noUsername
   });
   res.json({ ok: true, name: finalName, entry });
 });
