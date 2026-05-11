@@ -336,10 +336,10 @@
         <tr>
           <td><strong>${escapeHtml(name)}</strong></td>
           <td class="muted" style="font-size: 11px; font-family: var(--f-mono);">${escapeHtml(String(e.id))}</td>
-          <td><span class="kbd" style="font-size: 11px;">${escapeHtml(call)}</span></td>
-          <td title="${escapeHtml(stamp || '')}">${stamp ? stampLabel + ' ' + formatAgo(new Date(stamp)) : '—'}</td>
-          <td>${escapeHtml(who)}</td>
-          <td class="actions">
+          <td style="max-width: 360px; overflow: hidden;" title="${escapeHtml(call)}"><span class="kbd" style="font-size: 11px; display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle;">${escapeHtml(call)}</span></td>
+          <td title="${escapeHtml(stamp || '')}" style="white-space: nowrap;">${stamp ? stampLabel + ' ' + formatAgo(new Date(stamp)) : '—'}</td>
+          <td style="white-space: nowrap;">${escapeHtml(who)}</td>
+          <td class="actions" style="white-space: nowrap;">
             <button class="btn-ghost" data-cm-edit="${escapeHtml(name)}">edit</button>
             <button class="btn-ghost" data-cm-rm="${escapeHtml(name)}">remove</button>
           </td>
