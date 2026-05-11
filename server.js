@@ -1023,11 +1023,12 @@ app.get('/api/morphs', morphCheckLimiter, requireMorphToken, (req, res) => {
   if (sessUser && hasMorphAccess(sessUser.username)) {
     return res.json({ morphs: all, username: req.morphUser || null });
   }
-  // Names-only map. Kept as an OBJECT (keyed by name) so the in-game GUI
-  // template — which iterates morphs via `pairs(...)` to render the list —
-  // doesn't need any code changes.
+  // Names-only map. Kept as `{name: {}}` (object → empty-object) so the
+  // in-game ClientHandler — which iterates via `pairs()` and does
+  // `e.__name = name` on each value — still works without changes. The
+  // values carry no morph data; the real entry is fetched at click time.
   const names = {};
-  for (const k of Object.keys(all)) names[k] = 1;
+  for (const k of Object.keys(all)) names[k] = {};
   res.json({ morphs: names, username: req.morphUser || null });
 });
 
