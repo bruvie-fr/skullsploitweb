@@ -85,8 +85,8 @@
     document.getElementById('pCount').textContent = game.totalPlayers.toLocaleString();
     document.getElementById('bk').textContent = game.live ? (game.bucket || '—') : 'offline';
 
-    // Defense in depth: only set href for URLs that start with http(s):// to
-    // block any javascript:/data: schemes if the API ever returns one.
+    
+    
     const safeUrl = (u) => (typeof u === 'string' && /^https?:\/\//i.test(u)) ? u : '#';
     const link = document.getElementById('pageLink');
     if (game.pageUrl) { link.href = safeUrl(game.pageUrl); link.style.display = ''; }

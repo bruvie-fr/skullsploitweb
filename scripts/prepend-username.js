@@ -1,10 +1,4 @@
 'use strict';
-// One-shot: walk data/morph-custom.json and prepend "USERNAME" to every entry's
-// args list (skipping entries that already have USERNAME somewhere). Doesn't
-// touch entries that have no args field (those rely on the dispatch's default
-// of {playerName} as the single arg).
-//
-// run: node scripts/prepend-username.js
 
 const fs = require('fs');
 const path = require('path');

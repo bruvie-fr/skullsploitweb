@@ -1,12 +1,4 @@
 'use strict';
-// Re-parse the original script-pack input file to identify entries whose
-// require call had ZERO arguments. Those scripts don't take a username
-// parameter at all — passing one breaks them.
-//
-// For each such entry already in data/morph-custom.json, set
-// `noUsername: true` and clear out the args we wrongly filled.
-//
-// usage: node scripts/mark-no-username.js <input.txt>
 
 const fs = require('fs');
 const path = require('path');
@@ -48,7 +40,6 @@ function normalizeDisplayName(name) {
   return name.replace(/[^A-Za-z0-9_\- ]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 40);
 }
 
-// Parse a single line. Returns { name, hadEmptyArgs } or null.
 function parseLine(rawLine) {
   const line = rawLine.replace(/\r$/, '').trim();
   if (!line || line.startsWith('--')) return null;
@@ -61,7 +52,7 @@ function parseLine(rawLine) {
     style = dotColon[1] === '.' ? 'args' : 'colon';
     rest = rest.slice(dotColon[0].length);
   }
-  let hadEmptyArgs = true; // true if zero args, false if any args present
+  let hadEmptyArgs = true; 
   let hadParens = false;
   if (rest.startsWith('(')) {
     hadParens = true;
@@ -72,7 +63,7 @@ function parseLine(rawLine) {
     rest = rest.slice(close + 1);
     if (style === 'model') style = 'call';
   } else {
-    // No parens at all — definitely no args (style=model)
+    
     hadEmptyArgs = true;
   }
   let name = rest.trim().replace(/^[-\s]+/, '').trim();
@@ -85,11 +76,11 @@ function parseLine(rawLine) {
 async function main() {
   if (!fs.existsSync(inputPath)) { console.error('input file not found:', inputPath); process.exit(1); }
 
-  // Names where the ORIGINAL line had no args (just (), or no parens at all).
-  // Use Map<lowername, true> for case-insensitive matching against morph-custom.
+  
+  
   const emptyArgsNames = new Map();
-  // Names where the original line DID have args — these are scripts that take args,
-  // so don't mark them noUsername even if duplicate names also have empty-arg variants.
+  
+  
   const hadArgsNames = new Map();
 
   const rl = readline.createInterface({
@@ -103,17 +94,17 @@ async function main() {
     if (!r) continue;
     const lk = r.name.toLowerCase();
     if (r.hadEmptyArgs && r.hadParens) {
-      // require(X).method() — had () but nothing inside
+      
       if (!hadArgsNames.has(lk)) emptyArgsNames.set(lk, true);
     } else if (!r.hadParens && r.style !== 'model') {
-      // require(X).method <name>  — has a method but the script pack omitted
-      // the (). These got style=args with no args field at import time and
-      // were wrongly filled with [USERNAME] by normalize-usernames.
+      
+      
+      
       if (!hadArgsNames.has(lk)) emptyArgsNames.set(lk, true);
     } else if (!r.hadParens) {
-      // require(X) <name>  — pure model style, no call, no args. Already correct.
+      
     } else {
-      // Had args
+      
       hadArgsNames.set(lk, true);
       emptyArgsNames.delete(lk);
     }
@@ -122,11 +113,11 @@ async function main() {
   console.log('names with original empty () in script pack: ' + emptyArgsNames.size);
   console.log('names with original args in script pack: ' + hadArgsNames.size);
 
-  // Now mark matching entries in morph-custom.json
+  
   let marked = 0, skippedAlreadyMarked = 0, notFound = 0;
   const stamp = new Date().toISOString();
   for (const lk of emptyArgsNames.keys()) {
-    // Find the actual case-preserved key in morph-custom
+    
     let key = null;
     for (const k of Object.keys(all)) {
       if (k.toLowerCase() === lk) { key = k; break; }
@@ -135,7 +126,7 @@ async function main() {
     const e = all[key];
     if (e.noUsername) { skippedAlreadyMarked++; continue; }
     e.noUsername = true;
-    delete e.args; // remove the wrongly-filled USERNAME
+    delete e.args; 
     e.updatedAt = stamp;
     e.updatedBy = 'system';
     marked++;

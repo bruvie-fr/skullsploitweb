@@ -1,13 +1,9 @@
 #!/usr/bin/env node
-// One-shot importer for skullrequires data into skullsploit.
-// Run: node scripts/import-skullrequires.js
-// Re-running is safe: this rewrites data/scripts.json with fresh entries.
 
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-// configurable: which dev account owns the imported scripts
 const AUTHOR = 'bruvo';
 
 const SCRIPTS_FILE = path.join(__dirname, '..', 'data', 'scripts.json');
@@ -448,7 +444,6 @@ const existing = (() => {
   catch { return []; }
 })();
 
-// configurable: titles to drop on re-import (smoke-test leftovers)
 const DROP_TITLES = new Set(['Dark Knight','Sharkbite Aim','Phantom GUI','Wolf Morph','weird cat','sec test']);
 const keep = existing.filter(s => !DROP_TITLES.has(s.title));
 

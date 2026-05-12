@@ -1,24 +1,9 @@
 'use strict';
-// Resets a dev's password directly in data/devs.json. Use this on the prod
-// server when the bootstrap password is compromised and you need to rotate
-// it before logging in via the website.
-//
-// usage:
-//   node scripts/set-dev-password.js <username> <new_password>
-//
-// example (rotate bruvo on prod):
-//   sudo systemctl stop skullsploit
-//   node scripts/set-dev-password.js bruvo 'a-fresh-strong-password'
-//   sudo systemctl start skullsploit
-//
-// the password is hashed with bcrypt (10 rounds) before being written.
-// nothing is logged or echoed back to the terminal that includes the password.
 
 const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcryptjs');
 
-// Args: username, password, optional --data <path-to-devs.json>
 let username, password, dataPath;
 for (let i = 2; i < process.argv.length; i++) {
   const a = process.argv[i];
@@ -35,7 +20,6 @@ if (username.length > 64 || password.length < 8 || password.length > 256) {
   process.exit(1);
 }
 
-// Search likely locations if --data wasn't given.
 const candidates = dataPath ? [dataPath] : [
   path.join(__dirname, '..', 'data', 'devs.json'),
   '/home/ubuntu/skullsploit/data/devs.json',

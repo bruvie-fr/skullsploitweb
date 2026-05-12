@@ -1,23 +1,4 @@
 'use strict';
-// Imports a flat "script pack" text file into data/morph-custom.json.
-//
-// Each input line is expected to be of the form:
-//   require(NUMERIC_ID)[.method|:method][(args...)]   <human-readable name>
-//
-// Parser supports four shapes:
-//   require(123).method(args...) name        -> style=args
-//   require(123):method(args...) name        -> style=colon
-//   require(123)(args...) name               -> style=call
-//   require(123) name                        -> style=model
-//
-// Any arg whose string value matches USERNAME_HINTS gets normalized to the
-// literal token "USERNAME", which the runtime dispatch substitutes with the
-// player's roblox name at fire time.
-//
-// Dedupe is by display-name (lowercased). Names that fail CUSTOM_NAME_RE
-// (3-40 chars, A-Z 0-9 _ - space) are dropped.
-//
-// usage: node scripts/import-script-pack.js <input.txt> [--dry] [--max N]
 
 const fs = require('fs');
 const path = require('path');
@@ -35,15 +16,10 @@ const MAX_ENTRIES = maxIdx >= 0 ? Number(argv[maxIdx + 1]) : Infinity;
 
 const OUT_PATH = path.join(__dirname, '..', 'data', 'morph-custom.json');
 
-// Any of these in argument position get rewritten to the USERNAME token.
 const USERNAME_HINTS = new Set(['LuaGunsX', 'username', 'USER', 'YourName', 'YOURNAME']);
 
-// Same regex the server uses, kept in sync intentionally.
 const NAME_RE = /^[A-Za-z0-9_\- ]{1,40}$/;
 
-// ----- arg parser -----
-// Parse a Lua-ish arg list (no expressions, just literals: strings, numbers, booleans, nil).
-// Returns array of values OR null on parse failure.
 function parseArgs(body) {
   const out = [];
   let i = 0;
@@ -52,7 +28,7 @@ function parseArgs(body) {
     while (i < len && /\s/.test(body[i])) i++;
     if (i >= len) break;
     const c = body[i];
-    // string with quotes
+    
     if (c === '"' || c === "'") {
       const q = c;
       let j = i + 1, s = '';
@@ -64,7 +40,7 @@ function parseArgs(body) {
       out.push(s);
       i = j + 1;
     }
-    // number
+    
     else if (/[\d\-+]/.test(c)) {
       let j = i;
       while (j < len && /[\d\-+.eExX0-9a-fA-F]/.test(body[j])) j++;
@@ -73,19 +49,19 @@ function parseArgs(body) {
       out.push(n);
       i = j;
     }
-    // boolean / nil
+    
     else if (/[a-zA-Z_]/.test(c)) {
       let j = i;
       while (j < len && /[a-zA-Z0-9_]/.test(body[j])) j++;
       const word = body.slice(i, j);
       if (word === 'true') out.push(true);
       else if (word === 'false') out.push(false);
-      else if (word === 'nil') {} // skip nil args (Lua varargs would drop them anyway)
+      else if (word === 'nil') {} 
       else return null;
       i = j;
     }
     else return null;
-    // expect comma or end
+    
     while (i < len && /\s/.test(body[i])) i++;
     if (i < len && body[i] === ',') { i++; }
     else if (i < len) return null;
@@ -93,8 +69,6 @@ function parseArgs(body) {
   return out;
 }
 
-// Find matching close-paren starting from position `start` (which points at '(').
-// Respects nested parens and string contents.
 function findMatchingParen(s, start) {
   if (s[start] !== '(') return -1;
   let depth = 0;
@@ -134,7 +108,7 @@ function parseLine(rawLine) {
   let method;
   let args = null;
 
-  // optional .method or :method
+  
   const dotColon = rest.match(/^([.:])([a-zA-Z_][a-zA-Z0-9_]*)/);
   if (dotColon) {
     style = dotColon[1] === '.' ? 'args' : 'colon';
@@ -142,7 +116,7 @@ function parseLine(rawLine) {
     rest = rest.slice(dotColon[0].length);
   }
 
-  // optional argument list in parens
+  
   if (rest.startsWith('(')) {
     const close = findMatchingParen(rest, 0);
     if (close < 0) return null;
@@ -151,23 +125,23 @@ function parseLine(rawLine) {
     if (args === null) return null;
     rest = rest.slice(close + 1);
 
-    // If no .method or :method came before the args, this is a call-style
+    
     if (style === 'model') style = 'call';
   }
 
-  // Display name = trailing text after the call
+  
   let name = rest.trim();
-  // strip leading dashes / comment markers if the pack used them
+  
   name = name.replace(/^[-\s]+/, '').trim();
   if (!name) return null;
 
-  // Normalize args: rewrite username-placeholder values to the USERNAME token
+  
   if (args) {
     args = args.map(a => (typeof a === 'string' && USERNAME_HINTS.has(a)) ? 'USERNAME' : a);
   }
 
-  // Trim & normalize name to fit CUSTOM_NAME_RE: replace runs of non-allowed
-  // chars with a single space, collapse spaces, trim, cap at 40.
+  
+  
   name = name.replace(/[^A-Za-z0-9_\- ]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 40);
   if (!NAME_RE.test(name)) return null;
   if (name.length < 3) return null;
@@ -187,7 +161,7 @@ async function main() {
   const existing = fs.existsSync(OUT_PATH) ? JSON.parse(fs.readFileSync(OUT_PATH, 'utf8')) : {};
   const existingLower = new Set(Object.keys(existing).map(k => k.toLowerCase()));
 
-  const adding = new Map(); // lowerName -> { displayName, entry }
+  const adding = new Map(); 
   let scanned = 0, parsed = 0, skippedDup = 0, skippedInvalid = 0, skippedExisting = 0;
 
   const rl = readline.createInterface({

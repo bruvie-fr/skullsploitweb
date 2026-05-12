@@ -104,7 +104,6 @@
   </div>
 </section>
 
-<!-- edit modal -->
 <div class="modal-backdrop" id="editModal">
   <div class="modal" style="max-width: 640px;">
     <button class="modal-close" id="editClose">close</button>
@@ -229,7 +228,7 @@
     updateCustomPreview();
     $('cmSearch').addEventListener('input', renderCustom);
 
-    // edit modal events
+    
     $('emSaveBtn').addEventListener('click', saveEdit);
     $('emCancelBtn').addEventListener('click', closeEdit);
     $('editClose').addEventListener('click', closeEdit);
@@ -247,7 +246,7 @@
     await Promise.all([loadWhitelist(), loadMorphsCount(), loadLogs(), loadCustom()]);
   }
 
-  // ----- custom morphs -----
+  
   let customs = {};
 
   async function loadCustom() {
@@ -257,13 +256,13 @@
       const n = Object.keys(customs).length;
       $('cmCount').textContent = n + (n === 1 ? ' entry' : ' entries');
       renderCustom();
-    } catch { /* shrug */ }
+    } catch {  }
   }
 
   function callPreview(name, id, style, method, args, noUsername) {
-    // Show what the in-game dispatch will actually call. If args is empty
-    // and noUsername is NOT set, the dispatch auto-injects the player name,
-    // so reflect that with a USERNAME token in the preview.
+    
+    
+    
     let argList;
     if (args.length > 0) argList = args.join(', ');
     else if (noUsername || style === 'model') argList = '';
@@ -283,7 +282,7 @@
         if (l === 'USERNAME') return l;
         if (l === 'true' || l === 'false') return l === 'true';
         if (/^-?\d+(\.\d+)?$/.test(l)) return Number(l);
-        // strip wrapping quotes if user typed them
+        
         return l.replace(/^["'](.*)["']$/, '$1');
       });
   }
@@ -353,7 +352,7 @@
     });
   }
 
-  // ----- edit modal -----
+  
   let editingName = null;
 
   function openEdit(name) {

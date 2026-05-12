@@ -535,7 +535,6 @@ td.actions { text-align: right; white-space: nowrap; }
   margin-top: 16px;
 }
 
-/* ----- mobile polish ----- */
 @media (max-width: 720px) {
   html, body { font-size: 14px; }
   .hero { padding: 48px var(--pad-sm) 32px; }
@@ -566,12 +565,12 @@ td.actions { text-align: right; white-space: nowrap; }
   .like { padding: 8px 12px; font-size: 11px; min-height: 38px; }
   button, .btn { padding: 10px 16px; font-size: 11px; min-height: 40px; }
   .btn-ghost { padding: 8px 12px; min-height: 36px; }
-  input, textarea, select { font-size: 16px; padding: 12px 0; } /* 16px+ prevents iOS auto-zoom */
+  input, textarea, select { font-size: 16px; padding: 12px 0; } 
   textarea { min-height: 120px; font-size: 14px; }
   .nav-drawer-links a { font-size: 32px; padding: 10px 0; }
   .row-between { gap: 8px; }
   .foot { padding: 20px var(--pad-sm); flex-direction: column; align-items: flex-start; gap: 6px; }
-  /* prevent long inline mono strings (place ids, hashes) blowing out width */
+  
   .kbd, td.code { word-break: break-all; }
 }
 

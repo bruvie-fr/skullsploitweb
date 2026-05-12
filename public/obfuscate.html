@@ -130,7 +130,7 @@ end
       document.body.appendChild(a); a.click();
       setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 0);
     });
-    // ctrl/cmd+enter to run
+    
     $('src').addEventListener('keydown', e => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); run(); }
     });

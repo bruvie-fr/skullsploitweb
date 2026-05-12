@@ -1,6 +1,5 @@
 'use strict';
-// smoke test for lib/luaobf.js — source-level obfuscator (no loadstring).
-// run: node scripts/test-luaobf.js
+
 const { obfuscate, _internal } = require('../lib/luaobf');
 
 const cases = [
@@ -54,7 +53,7 @@ for (const c of cases) {
   try {
     const r = obfuscate(c.src);
     if (!r.ok) { console.log('FAIL: ' + r.error); fail++; continue; }
-    // strip banner/comments before checking for forbidden runtime symbols
+    
     const code = r.output.replace(/^--[^\n]*\n/gm, '');
     if (/\bloadstring\b|\bload\s*\(/.test(code)) { console.log('FAIL: loadstring leaked'); fail++; continue; }
     if (/\bbit32\b/.test(code))                  { console.log('FAIL: bit32 leaked');     fail++; continue; }
@@ -69,11 +68,9 @@ for (const c of cases) {
 console.log('');
 console.log(`${pass} pass, ${fail} fail`);
 
-// Print a small sample so we can eyeball the result
 console.log('\n----- sample output (multiline + comment) -----');
 console.log(obfuscate(cases[1].src).output);
 
-// rename safety check — fields and method names must NOT be touched
 const r2 = obfuscate(`
 local Players = game:GetService("Players")
 local me = Players.LocalPlayer
@@ -87,7 +84,7 @@ const ok =
   r2.includes('LocalPlayer') &&
   r2.includes('GetMouse') &&
   r2.includes('game:') &&
-  /Players\b/.test(r2); // Players is a global ref to a... wait — we renamed `local Players`. So the original name shouldn't appear bare.
+  /Players\b/.test(r2); 
 console.log('field/method names preserved:', r2.includes('GetService') && r2.includes('LocalPlayer') && r2.includes('GetMouse') ? 'ok' : 'FAIL');
 console.log('local vars renamed:', !/local Players/.test(r2) ? 'ok' : 'FAIL — locals not renamed');
 

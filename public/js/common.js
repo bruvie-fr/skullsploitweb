@@ -63,7 +63,7 @@
       links.push({ href: '/obfuscate', label: 'Obfuscate' });
       links.push({ href: '/logs',      label: 'Logs' });
     }
-    // Morphs page: any dev/owner OR a regular user promoted to "morph" role.
+    
     if (me && me.isMorph) {
       links.push({ href: '/morphs', label: 'Morphs' });
     }

@@ -204,7 +204,7 @@
   async function loadAudit() {
     try {
       const { logs } = await api('/api/audit?limit=1');
-      // not exposed as a count; we use a small indicator instead
+      
       document.getElementById('aud').textContent = logs.length ? 'open →' : 'empty';
     } catch { document.getElementById('aud').textContent = '—'; }
   }

@@ -52,7 +52,7 @@
   };
   tick(); setInterval(tick, 30000);
 
-  // already logged in? skip
+  
   api('/api/session').then(s => { if (s.user) window.location.href = '/dashboard'; }).catch(()=>{});
 </script>
 </body>

@@ -90,7 +90,7 @@
       const chip = g.live
         ? `<span class="chip live">live</span>`
         : `<span class="chip dead">offline</span>`;
-      // try button only on offline rows. live games go straight to the detail page.
+      
       const tryBtn = (!g.live && g.tryJoinUrl)
         ? `<a class="btn-solid game-row-try" href="${escapeHtml(g.tryJoinUrl)}" target="_blank" rel="noopener" data-stop>try join →</a>`
         : '';
@@ -117,7 +117,7 @@
       </a>`;
     }).join('');
 
-    // make the "try join" button open Roblox without also navigating to /game/:placeId
+    
     document.querySelectorAll('[data-stop]').forEach(b => b.addEventListener('click', e => e.stopPropagation()));
   }
 
