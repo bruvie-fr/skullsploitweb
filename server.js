@@ -1278,40 +1278,186 @@ app.get('/api/morphs/log', requireMorphAccess, (req, res) => {
   res.json({ logs: all.slice(0, limit) });
 });
 
-// public loader served as plain text/lua.
-//
-// The script is shaped as a Roblox ModuleScript: it returns a function. The
-// owner uploads it as a free model and shares `require(ASSET_ID)()` with
-// whitelisted users — same invocation pattern as every morph in the list.
-// It deliberately does NOT auto-run (no top-level execution), so it never
-// leaks into a skullsploit auto-loader chain.
-//
-// Loadstring is also supported as a fallback: `loadstring(game:HttpGet("/m.lua"))()()`
-// (note the double call — the module returns a function which then needs to be called).
-function buildMorphLoader(baseUrl) {
-  return `-- skullsploit morphs · module loader
--- whitelist-gated. ask the owner to add your roblox username.
---
--- preferred: upload as a Roblox ModuleScript free model, then:
---   require(YOUR_ASSET_ID)()
---
--- fallback (no model upload):
---   loadstring(game:HttpGet("${baseUrl}/m.lua"))()()
---
--- this script does NOT execute on require. it returns a function. you call
--- that function to actually open the GUI. lets you bind it to a button or
--- gate it behind your own logic.
+// Render a Buffer as a Lua double-quoted string of \xNN escapes — used to
+// embed our binary XOR + HMAC keys into the loader source.
+function bufToLuaEscape(buf) {
+  let s = '';
+  for (let i = 0; i < buf.length; i++) s += '\\x' + buf[i].toString(16).padStart(2, '0');
+  return s;
+}
 
-return function()
+// Public loader served as plain text/lua. Hits the secured morph API using
+// the same HMAC + one-time-nonce protocol as MainModule, then builds the
+// morph GUI inline (no Roblox asset dependency). Player usage:
+//
+//   loadstring(game:HttpGet("https://skullsploit.com/m.lua"))()
+//
+// Auto-runs on load. No `require()` involved, so it survives the published
+// MainModule asset getting flagged off the Creator Store. Works in any
+// context that gives us an HTTP-get primitive (game:HttpGet from most
+// executors, request() from Synapse-style frameworks, or HttpService for
+// server-side use).
+//
+// The XOR + HMAC keys are interpolated into the source. They're the same
+// keys baked into MainModule — leaking either is equivalent to decompiling
+// the published model, so we accept that exposure. Server-side defenses
+// (one-time nonces, rate limits, whitelist gate, per-entry single-fetch)
+// remain the real boundary; the keys alone get an attacker nothing without
+// a whitelisted username and per-fetch nonces consumed at 30/min/IP.
+function buildMorphLoader(baseUrl) {
+  const xorKey = bufToLuaEscape(MORPH_USERNAME_KEY);
+  const macKey = bufToLuaEscape(MORPH_MAC_KEY);
+  return buildMorphLoaderBody(baseUrl, xorKey, macKey);
+}
+
+function buildMorphLoaderBody(baseUrl, xorKey, macKey) {
+  return `-- skullsploit morphs · standalone loader
+-- usage:
+--   loadstring(game:HttpGet("${baseUrl}/m.lua"))()
+-- works in any context with an HTTP-get primitive (executor / F9 console
+-- with game:HttpGet injected, Synapse-style request(), or server-side
+-- HttpService). whitelist-gated; ask the owner for access.
+
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 local LP = Players.LocalPlayer
 local BASE = "${baseUrl}"
 
+local XOR_KEY = "${xorKey}"
+local MAC_KEY = "${macKey}"
+
+-- ----- SHA-256 + HMAC (pure Luau, bit32 only) -----
+local SHA256_K = {
+  0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+  0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+  0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+  0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+  0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+  0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+  0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+  0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2,
+}
+local function rrot(x, n) return bit32.bor(bit32.rshift(x, n), bit32.lshift(x, 32 - n)) end
+local function sha256_binary(msg)
+  local H = {0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19}
+  local bitLen = #msg * 8
+  msg = msg .. "\\x80"
+  while (#msg % 64) ~= 56 do msg = msg .. "\\0" end
+  msg = msg .. "\\0\\0\\0\\0" .. string.char(
+    bit32.band(bit32.rshift(bitLen, 24), 0xff),
+    bit32.band(bit32.rshift(bitLen, 16), 0xff),
+    bit32.band(bit32.rshift(bitLen, 8), 0xff),
+    bit32.band(bitLen, 0xff))
+  for chunk = 1, #msg, 64 do
+    local w = {}
+    for i = 0, 15 do
+      local p = chunk + i * 4
+      w[i] = bit32.bor(
+        bit32.lshift(msg:byte(p), 24),
+        bit32.lshift(msg:byte(p+1), 16),
+        bit32.lshift(msg:byte(p+2), 8),
+        msg:byte(p+3))
+    end
+    for i = 16, 63 do
+      local s0 = bit32.bxor(rrot(w[i-15], 7), rrot(w[i-15], 18), bit32.rshift(w[i-15], 3))
+      local s1 = bit32.bxor(rrot(w[i-2], 17), rrot(w[i-2], 19), bit32.rshift(w[i-2], 10))
+      w[i] = bit32.band(w[i-16] + s0 + w[i-7] + s1, 0xffffffff)
+    end
+    local a,b,c,d,e,f,g,h = H[1],H[2],H[3],H[4],H[5],H[6],H[7],H[8]
+    for i = 0, 63 do
+      local S1 = bit32.bxor(rrot(e,6), rrot(e,11), rrot(e,25))
+      local ch = bit32.bxor(bit32.band(e,f), bit32.band(bit32.bnot(e), g))
+      local t1 = bit32.band(h + S1 + ch + SHA256_K[i+1] + w[i], 0xffffffff)
+      local S0 = bit32.bxor(rrot(a,2), rrot(a,13), rrot(a,22))
+      local maj = bit32.bxor(bit32.band(a,b), bit32.band(a,c), bit32.band(b,c))
+      local t2 = bit32.band(S0 + maj, 0xffffffff)
+      h = g; g = f; f = e; e = bit32.band(d + t1, 0xffffffff)
+      d = c; c = b; b = a; a = bit32.band(t1 + t2, 0xffffffff)
+    end
+    H[1] = bit32.band(H[1] + a, 0xffffffff)
+    H[2] = bit32.band(H[2] + b, 0xffffffff)
+    H[3] = bit32.band(H[3] + c, 0xffffffff)
+    H[4] = bit32.band(H[4] + d, 0xffffffff)
+    H[5] = bit32.band(H[5] + e, 0xffffffff)
+    H[6] = bit32.band(H[6] + f, 0xffffffff)
+    H[7] = bit32.band(H[7] + g, 0xffffffff)
+    H[8] = bit32.band(H[8] + h, 0xffffffff)
+  end
+  local out = {}
+  for i = 1, 8 do
+    out[i] = string.char(
+      bit32.band(bit32.rshift(H[i], 24), 0xff),
+      bit32.band(bit32.rshift(H[i], 16), 0xff),
+      bit32.band(bit32.rshift(H[i], 8), 0xff),
+      bit32.band(H[i], 0xff))
+  end
+  return table.concat(out)
+end
+local function tohex(s) local o={} for i=1,#s do o[i]=string.format("%02x", s:byte(i)) end return table.concat(o) end
+local function hmac_hex(key, message)
+  local bs = 64
+  if #key > bs then key = sha256_binary(key) end
+  if #key < bs then key = key .. string.rep("\\0", bs - #key) end
+  local o,i = {},{}
+  for n = 1, bs do
+    o[n] = string.char(bit32.bxor(key:byte(n), 0x5c))
+    i[n] = string.char(bit32.bxor(key:byte(n), 0x36))
+  end
+  return tohex(sha256_binary(table.concat(o) .. sha256_binary(table.concat(i) .. message)))
+end
+
+local function encryptName(name)
+  local plain = tostring(name) .. ":" .. tostring(os.time())
+  local out = {}
+  for i = 1, #plain do
+    out[i] = string.format("%02x", bit32.bxor(plain:byte(i), XOR_KEY:byte(((i-1) % #XOR_KEY) + 1)))
+  end
+  return table.concat(out)
+end
+
+-- ----- HTTP shims (executor first, server fallback) -----
 local function httpGet(url)
-  local ok, body = pcall(function() return game:HttpGet(url, true) end)
-  if ok then return body end
+  -- game:HttpGet (executor-injected on most frameworks)
+  local ok, body = pcall(function() return game:HttpGet(url) end)
+  if ok and body then return body end
+  -- Synapse-style request()
+  local req
+  do
+    local ok1, r1 = pcall(function() return request end)
+    if ok1 and typeof(r1) == "function" then req = r1 end
+    if not req then
+      local ok2, r2 = pcall(function() return http_request end)
+      if ok2 and typeof(r2) == "function" then req = r2 end
+    end
+  end
+  if typeof(req) == "function" then
+    local ok2, res = pcall(req, { Url = url, Method = "GET" })
+    if ok2 and res and res.Body then return res.Body end
+  end
+  -- HttpService (server-side)
+  local ok3, b = pcall(function() return HttpService:GetAsync(url, true) end)
+  if ok3 and b then return b end
   return nil
+end
+
+local function httpPost(url, tbl)
+  local body = HttpService:JSONEncode(tbl)
+  local req
+  do
+    local ok1, r1 = pcall(function() return request end)
+    if ok1 and typeof(r1) == "function" then req = r1 end
+    if not req then
+      local ok2, r2 = pcall(function() return http_request end)
+      if ok2 and typeof(r2) == "function" then req = r2 end
+    end
+  end
+  if typeof(req) == "function" then
+    pcall(req, { Url = url, Method = "POST", Headers = {["Content-Type"]="application/json"}, Body = body })
+    return
+  end
+  pcall(function()
+    HttpService:RequestAsync({ Url = url, Method = "POST", Headers = {["Content-Type"]="application/json"}, Body = body })
+  end)
 end
 
 local function jdec(s)
@@ -1321,63 +1467,87 @@ local function jdec(s)
   return nil
 end
 
-local function httpPost(url, tbl)
-  if typeof(request) ~= "function" then return end
-  pcall(request, {
-    Url = url, Method = "POST",
-    Headers = { ["Content-Type"] = "application/json" },
-    Body = HttpService:JSONEncode(tbl)
-  })
+-- ----- signed-request helpers -----
+local function fetchNonce()
+  local d = jdec(httpGet(BASE .. "/api/morphs/nonce"))
+  if not d or type(d.nonce) ~= "string" then return nil end
+  return d.nonce
 end
 
--- 1. whitelist check
-local check = jdec(httpGet(BASE .. "/api/morphs/check?u=" .. HttpService:UrlEncode(LP.Name)))
+local function signedUrl(path, u)
+  local n = fetchNonce()
+  if not n then return nil end
+  local ts = tostring(os.time())
+  local sig = hmac_hex(MAC_KEY, u .. ":" .. n .. ":" .. ts)
+  return BASE .. path .. "?u=" .. u .. "&n=" .. n .. "&t=" .. ts .. "&s=" .. sig
+end
+
+-- ----- whitelist check -----
+local checkUrl = signedUrl("/api/morphs/check", encryptName(LP.Name))
+if not checkUrl then warn("[morphs] could not fetch nonce") return end
+local check = jdec(httpGet(checkUrl))
 if not check or not check.ok then
   warn("[morphs] " .. LP.Name .. " is not whitelisted. ask the owner.")
   return
 end
 
--- 2. fetch morphs
-local data = jdec(httpGet(BASE .. "/api/morphs"))
-if not data or not data.morphs then
-  warn("[morphs] failed to fetch morph list")
-  return
+-- ----- names list -----
+local listUrl = signedUrl("/api/morphs", encryptName(LP.Name))
+if not listUrl then warn("[morphs] nonce fetch failed") return end
+local data = jdec(httpGet(listUrl))
+if not data or not data.morphs then warn("[morphs] failed to fetch list") return end
+
+local names = {}
+for name, _ in pairs(data.morphs) do table.insert(names, name) end
+table.sort(names, function(a, b) return a:lower() < b:lower() end)
+
+-- ----- per-entry cache + fire -----
+local entryCache = {}
+local function fetchEntry(name)
+  if entryCache[name] then return entryCache[name] end
+  local base = signedUrl("/api/morphs/entry", encryptName(LP.Name))
+  if not base then return nil end
+  local url = base .. "&name=" .. HttpService:UrlEncode(name)
+  local d = jdec(httpGet(url))
+  if not d or not d.entry then return nil end
+  entryCache[name] = d.entry
+  return d.entry
 end
 
-local list = {}
-for name, e in pairs(data.morphs) do
-  e.__name = name
-  table.insert(list, e)
+local function resolveArgs(entry)
+  if entry.args and #entry.args > 0 then
+    local out = {}
+    for _, a in ipairs(entry.args) do table.insert(out, a == "USERNAME" and LP.Name or a) end
+    return out
+  end
+  if entry.noUsername then return {} end
+  return { LP.Name }
 end
-table.sort(list, function(a, b) return a.__name:lower() < b.__name:lower() end)
 
--- 3. fire one morph
-local function fire(entry)
+local function fire(name)
+  local entry = fetchEntry(name)
+  if not entry then return false, "fetch failed" end
   local ok, err = pcall(function()
     local mod = require(entry.id)
     if entry.style == "args" then
-      local args = entry.args or {}
       local fn = mod[entry.method]
-      if typeof(fn) == "function" then fn((table.unpack or unpack)(args)) end
+      if typeof(fn) == "function" then fn((table.unpack or unpack)(resolveArgs(entry))) end
     elseif entry.style == "colon" then
       local fn = mod[entry.method]
-      if typeof(fn) == "function" then fn(mod) end
+      if typeof(fn) == "function" then fn(mod, (table.unpack or unpack)(resolveArgs(entry))) end
     elseif entry.style == "call" then
-      if typeof(mod) == "function" then mod() end
-    elseif entry.style == "model" then
-      -- module loads itself on require
+      if typeof(mod) == "function" then mod((table.unpack or unpack)(resolveArgs(entry))) end
     end
   end)
-  if not ok then warn("[morphs] " .. tostring(entry.__name) .. ": " .. tostring(err)) end
-  httpPost(BASE .. "/api/morphs/log", {
-    username = LP.Name,
-    morph = entry.__name,
-    placeId = tostring(game.PlaceId)
-  })
+  -- log it (fire-and-forget)
+  local logUrl = signedUrl("/api/morphs/log", encryptName(LP.Name))
+  if logUrl then httpPost(logUrl, { username = LP.Name, morph = name, placeId = tostring(game.PlaceId) }) end
+  return ok, err
 end
 
--- 4. build GUI
-local existing = (gethui and gethui() or game:GetService("CoreGui")):FindFirstChild("SkullMorphs")
+-- ----- GUI -----
+local parent = (gethui and gethui()) or game:GetService("CoreGui")
+local existing = parent:FindFirstChild("SkullMorphs")
 if existing then existing:Destroy() end
 
 local gui = Instance.new("ScreenGui")
@@ -1385,7 +1555,7 @@ gui.Name = "SkullMorphs"
 gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = true
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-gui.Parent = (gethui and gethui()) or game:GetService("CoreGui")
+gui.Parent = parent
 
 local INK    = Color3.fromRGB(236, 233, 227)
 local DIM    = Color3.fromRGB(144, 141, 134)
@@ -1427,7 +1597,7 @@ title.Size = UDim2.new(1, -80, 1, 0)
 title.Position = UDim2.new(0, 14, 0, 0)
 title.BackgroundTransparency = 1
 title.Font = Enum.Font.SourceSansBold
-title.Text = "morphs · " .. LP.Name
+title.Text = "morphs \xc2\xb7 " .. LP.Name
 title.TextColor3 = INK
 title.TextSize = 14
 title.TextXAlignment = Enum.TextXAlignment.Left
@@ -1438,7 +1608,7 @@ count.Size = UDim2.new(0, 60, 1, 0)
 count.Position = UDim2.new(1, -80, 0, 0)
 count.BackgroundTransparency = 1
 count.Font = Enum.Font.Code
-count.Text = #list .. ""
+count.Text = tostring(#names)
 count.TextColor3 = DIM
 count.TextSize = 11
 count.TextXAlignment = Enum.TextXAlignment.Right
@@ -1494,13 +1664,13 @@ layout.Padding = UDim.new(0, 1)
 layout.Parent = scroll
 
 local rowMeta = {}
-for i, item in ipairs(list) do
+for i, name in ipairs(names) do
   local btn = Instance.new("TextButton")
   btn.Size = UDim2.new(1, 0, 0, 30)
   btn.BackgroundColor3 = BG2
   btn.BorderSizePixel = 0
   btn.Font = Enum.Font.Code
-  btn.Text = "  " .. item.__name
+  btn.Text = "  " .. name
   btn.TextColor3 = INK
   btn.TextSize = 12
   btn.TextXAlignment = Enum.TextXAlignment.Left
@@ -1510,10 +1680,14 @@ for i, item in ipairs(list) do
   btn.MouseEnter:Connect(function() btn.BackgroundColor3 = BG3 end)
   btn.MouseLeave:Connect(function() btn.BackgroundColor3 = BG2 end)
   btn.MouseButton1Click:Connect(function()
-    btn.Text = "  ... " .. item.__name
-    task.spawn(function() fire(item); btn.Text = "  " .. item.__name end)
+    btn.Text = "  ... " .. name
+    task.spawn(function()
+      local ok, err = fire(name)
+      btn.Text = "  " .. name
+      if not ok then warn("[morphs] " .. name .. ": " .. tostring(err)) end
+    end)
   end)
-  table.insert(rowMeta, { name = item.__name:lower(), btn = btn })
+  table.insert(rowMeta, { name = name:lower(), btn = btn })
 end
 
 search:GetPropertyChangedSignal("Text"):Connect(function()
@@ -1523,8 +1697,7 @@ search:GetPropertyChangedSignal("Text"):Connect(function()
   end
 end)
 
-print("[morphs] loaded · " .. #list .. " entries · welcome, " .. LP.Name)
-end
+print("[morphs] loaded \xc2\xb7 " .. #names .. " entries \xc2\xb7 welcome, " .. LP.Name)
 `;
 }
 
